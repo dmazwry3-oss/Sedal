@@ -219,8 +219,12 @@ img, video { max-width: 100%; display: block; }
 .error-box { text-align: center; background: var(--surface-2); border: 1px solid rgba(255,92,114,.35); border-radius: var(--radius); padding: 30px 22px; }
 .error-box .err-ic { font-size: 40px; }
 .error-box h3 { margin: 10px 0 6px; color: var(--txt); }
-.error-box p { color: var(--txt-mut); margin: 0 auto; max-width: 420px; font-size: 14px; }
-.error-box .retry { margin-top: 16px; }
+.error-box .err-msg { color: var(--txt); font-weight: 600; margin: 0 auto 4px; max-width: 460px; font-size: 14.5px; }
+.error-box .err-sub { color: var(--txt-mut); margin: 6px auto 0; max-width: 460px; font-size: 14px; }
+.error-box .err-tips { text-align: left; max-width: 420px; margin: 12px auto 0; padding-left: 20px; color: var(--txt-mut); font-size: 14px; }
+.error-box .err-tips li { margin: 5px 0; }
+.error-box .err-tips b, .error-box .err-sub b { color: var(--txt); }
+.error-box .retry { margin-top: 18px; }
 
 /* ===================== RECENT ===================== */
 .recent { max-width: 760px; margin: 6px auto 0; padding: 14px clamp(16px, 5vw, 48px) 0; }

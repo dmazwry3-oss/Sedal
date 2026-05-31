@@ -26,7 +26,7 @@
       id: "tiktok", name: "TikTok", endpoint: "tiktok.php", param: "url",
       accent: "#fe2c55", badge: "linear-gradient(135deg,#25f4ee,#fe2c55)",
       placeholder: "https://www.tiktok.com/@user/video/...",
-      sample: "https://www.tiktok.com/@tiktok/video/7000000000000000000",
+      sample: "https://www.tiktok.com/@tiktok/video/7106594312292453675",
       detect: /tiktok\.com|douyin|vt\.tiktok|vm\.tiktok/i,
       tip: "Video TikTok tanpa watermark + audionya.",
     },
@@ -34,7 +34,7 @@
       id: "instagram", name: "Instagram", endpoint: "instagram.php", param: "q",
       accent: "#e1306c", badge: "linear-gradient(135deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)",
       placeholder: "https://www.instagram.com/p/...",
-      sample: "https://www.instagram.com/p/XYZ/",
+      sample: "https://www.instagram.com/reel/C5qWNkWreXf/",
       detect: /instagram\.com|instagr\.am/i,
       tip: "Foto, Reels, dan carousel Instagram.",
     },
@@ -50,7 +50,7 @@
       id: "twitter", name: "Twitter / X", endpoint: "twitter.php", param: "q",
       accent: "#1d9bf0", badge: "#1d9bf0",
       placeholder: "https://x.com/user/status/...",
-      sample: "https://x.com/user/status/123",
+      sample: "https://x.com/Twitter/status/1445078208190291973",
       detect: /twitter\.com|x\.com|t\.co/i,
       tip: "Video & gambar dari Tweet / status X.",
     },
@@ -58,7 +58,7 @@
       id: "tiktokv2", name: "TikTok V2", endpoint: "tiktokv2.php", param: "url",
       accent: "#00c2cc", badge: "linear-gradient(135deg,#fe2c55,#25f4ee)",
       placeholder: "https://www.tiktok.com/@user/video/...",
-      sample: "https://www.tiktok.com/@tiktok/video/7000000000000000000",
+      sample: "https://www.tiktok.com/@tiktok/video/7106594312292453675",
       detect: null, // manual fallback only
       tip: "Cadangan untuk TikTok bila yang utama gagal.",
     },
@@ -176,17 +176,52 @@
       catch (e2) { err = e2.message?.includes("HTTP") || /CORS|fetch|network/i.test(e2.message) ? e2 : e1; }
     }
 
-    if (data != null && !(typeof data === "object" && data.status === false && !hasMedia(data))) {
-      const ok = renderResult(data, val);
-      if (ok) { pushRecent(val, lastTitle); haptic([15, 40, 15]); }
-    } else {
-      renderError(err);
+    // 1) transport failed entirely
+    if (data == null) {
+      renderError(err || new Error("Tidak ada respons dari server."));
       haptic([50, 30, 50]);
+    } else {
+      // 2) the API itself reported a failure (even if HTTP 200)
+      const apiMsg = apiErrorMessage(data);
+      if (apiMsg && !hasMedia(data)) {
+        renderError(new Error(apiMsg), data, true);
+        haptic([50, 30, 50]);
+      } else {
+        // 3) success → render media
+        const ok = renderResult(data, val);
+        if (ok) { pushRecent(val, lastTitle); haptic([15, 40, 15]); }
+      }
     }
 
     setLoading(false);
     busy = false;
     el.resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  /* Detect an error envelope returned by the upstream API.
+     Handles shapes like:
+       { status:false, message:"..." }
+       { success:false, error:"..." }
+       { result:{ success:false, message:"Internal Server Error",
+                  error:"Request failed with status code 404" } }
+     Returns a human message string, or "" if it looks fine. */
+  function apiErrorMessage(data) {
+    if (typeof data !== "object" || data === null) return "";
+    const nodes = [data, data.result, data.data].filter((n) => n && typeof n === "object");
+    let failed = false;
+    let detail = "";
+    for (const n of nodes) {
+      if (n.success === false || n.status === false || n.ok === false || n.error) failed = true;
+      const msg = n.error || n.message || n.msg;
+      if (msg && typeof msg === "string" && !detail) detail = msg;
+    }
+    if (!failed) return "";
+    // map common upstream errors to friendlier wording
+    if (/404|not found/i.test(detail)) return "Konten tidak ditemukan (404) — link mungkin salah, sudah dihapus, atau privat.";
+    if (/internal server error|500/i.test(detail)) return "Server sumber sedang bermasalah (Internal Server Error). Coba lagi sebentar lagi.";
+    if (/timeout|timed out|504/i.test(detail)) return "Server sumber lama merespons (timeout). Coba lagi.";
+    if (/rate|too many|429/i.test(detail)) return "Terlalu banyak permintaan ke server (rate limit). Tunggu sebentar lalu coba lagi.";
+    return detail || "Server sumber menolak permintaan ini.";
   }
 
   function setLoading(on) {
@@ -349,25 +384,40 @@
       </div>`;
   }
 
-  function renderError(err, raw) {
+  function renderError(err, raw, isApiError) {
     el.resultSection.hidden = false;
     const msg = (err && err.message) || "Terjadi kesalahan.";
-    const corsLike = /CORS|fetch|Failed|network|proxy/i.test(msg);
+    const corsLike = !isApiError && /CORS|fetch|Failed to fetch|network|proxy \d/i.test(msg);
+
+    let tips = "";
+    if (isApiError) {
+      // upstream API responded but with an error — not our fault, not the user's link format
+      tips = `
+        <ul class="err-tips">
+          <li>Coba <b>lagi</b> beberapa saat — server sumber kadang sibuk.</li>
+          ${active.id === "tiktok" ? "<li>Coba ganti ke tab <b>TikTok V2</b>.</li>" : ""}
+          ${active.id === "tiktokv2" ? "<li>Coba ganti ke tab <b>TikTok</b> (yang utama).</li>" : ""}
+          <li>Pastikan kontennya <b>publik</b> (bukan akun privat) dan link masih aktif.</li>
+          <li>Gunakan link <b>asli/lengkap</b>, bukan contoh placeholder.</li>
+        </ul>`;
+    } else if (corsLike) {
+      tips = `<p class="err-sub">Sepertinya situs ini belum berjalan di Netlify, jadi permintaan langsung dari browser diblokir (CORS). Deploy ke Netlify agar proxy aktif.</p>`;
+    } else {
+      tips = `<p class="err-sub">Pastikan link benar &amp; kontennya publik, lalu coba lagi.${active.id === "tiktok" ? " Untuk TikTok, coba juga tab <b>TikTok V2</b>." : ""}</p>`;
+    }
+
     el.resultWrap.innerHTML = `
       <div class="error-box">
-        <div class="err-ic">😕</div>
-        <h3>Gagal mengambil media</h3>
-        <p>${escapeHtml(msg)}.
-          ${active.id === "tiktok" ? "Coba pakai tab <b>TikTok V2</b>, " : ""}
-          pastikan link benar &amp; kontennya publik, lalu coba lagi.
-          ${corsLike ? "<br><small>Catatan: jalankan situs ini di Netlify (proxy aktif) agar bebas CORS.</small>" : ""}
-        </p>
-        <button class="dl-action primary retry" id="retry-btn">Coba lagi</button>
-        ${raw ? `<details class="raw-toggle" style="margin-top:14px;text-align:left"><summary>Lihat respons</summary><pre class="raw-pre">${escapeHtml(JSON.stringify(raw, null, 2))}</pre></details>` : ""}
+        <div class="err-ic">${isApiError ? "🛠️" : "😕"}</div>
+        <h3>${isApiError ? "Server sumber sedang bermasalah" : "Gagal mengambil media"}</h3>
+        <p class="err-msg">${escapeHtml(msg)}</p>
+        ${tips}
+        <button class="dl-action primary retry" id="retry-btn">↻ Coba lagi</button>
+        ${raw ? `<details class="raw-toggle" style="margin-top:16px;text-align:left"><summary>Lihat respons teknis</summary><pre class="raw-pre">${escapeHtml(JSON.stringify(raw, null, 2))}</pre></details>` : ""}
       </div>`;
     const rb = $("#retry-btn");
     if (rb) rb.addEventListener("click", startDownload);
-    toast("Gagal — coba lagi atau ganti platform", "err");
+    toast(isApiError ? "Server sumber error — coba lagi" : "Gagal — coba lagi atau ganti platform", "err");
   }
 
   /* ===================================================================
