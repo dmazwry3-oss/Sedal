@@ -367,3 +367,128 @@ kbd { font-family: var(--font-term); font-size: 11px; padding: 2px 8px; border: 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+
+/* =====================================================================
+   PWA / MOBILE ENHANCEMENTS  (v3)
+   ===================================================================== */
+
+/* honor notches / rounded corners */
+.shell {
+  padding-left: max(clamp(14px, 3vw, 30px), env(safe-area-inset-left));
+  padding-right: max(clamp(14px, 3vw, 30px), env(safe-area-inset-right));
+  padding-top: max(22px, env(safe-area-inset-top));
+}
+
+/* ---- Mobile floating action button (hidden on desktop) ---- */
+.fab {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 70;
+  width: 62px; height: 62px;
+  border-radius: 50%;
+  border: 1px solid var(--green);
+  background: radial-gradient(circle at 30% 30%, rgba(43,255,136,0.35), rgba(8,12,20,0.96));
+  color: var(--green);
+  font-size: 26px; line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center; justify-content: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.55), 0 0 22px -4px var(--green);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .12s, box-shadow .2s;
+}
+.fab:active { transform: scale(0.9); }
+.fab.is-loading { color: var(--amber); border-color: var(--amber); }
+.fab.is-loading .fab-icon { animation: spin 0.9s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.fab::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 50%;
+  border: 1px solid var(--green); opacity: 0.4; animation: fabPulse 2s infinite;
+}
+@keyframes fabPulse { 0% { transform: scale(1); opacity: .5; } 100% { transform: scale(1.35); opacity: 0; } }
+
+/* ---- INSTALL button accent ---- */
+#btn-install { color: var(--green); border-color: rgba(43,255,136,.45); background: rgba(43,255,136,.08); }
+#btn-install:hover { background: var(--green); color: var(--bg); box-shadow: var(--glow-green); }
+#btn-lite[aria-pressed="true"] { color: var(--amber); border-color: rgba(255,180,84,.5); background: rgba(255,180,84,.1); }
+
+/* ---- LITE MODE: kill heavy FX, save battery ---- */
+body.lite .fx-matrix { display: none; }
+body.lite .fx-scanlines { display: none; }
+body.lite .glitch::before,
+body.lite .glitch::after { display: none; }
+body.lite .panel,
+body.lite .topbar { backdrop-filter: none; }
+body.lite .brand-bolt { animation: none; }
+
+/* =====================================================================
+   MOBILE LAYOUT  (<= 700px)
+   ===================================================================== */
+@media (max-width: 700px) {
+  .shell { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+
+  /* show the FAB */
+  .fab { display: flex; }
+
+  /* topbar becomes a tidy two-row cluster */
+  .topbar { padding: 12px 14px; gap: 10px; }
+  .brand-bolt { font-size: 24px; }
+  .status-cluster { gap: 6px; }
+  .status-cluster .pill { padding: 7px 10px; font-size: 11px; }
+
+  /* segmented route control spans full width on its own row */
+  #route-seg { order: 5; flex: 1 1 100%; }
+  #route-seg .seg-btn { flex: 1; padding: 9px 6px; }
+
+  /* bigger touch targets */
+  .tool-btn { padding: 16px 8px; }
+  .copy { padding: 7px 11px; font-size: 11px; }
+  .json-toggle { padding: 6px 11px; }
+  .btn-clear, .btn-paste { width: 32px; height: 32px; }
+  .btn-paste { right: 46px; }
+  #target-input { padding-right: 88px; }
+
+  /* prevent iOS auto-zoom on focus: input font-size >= 16px */
+  #target-input { font-size: 16px; }
+
+  /* the inline inject button stays, but is less prominent (FAB is primary) */
+  .btn-inject { padding: 16px; font-size: 13px; }
+
+  /* results: stack the media above info */
+  .result-card { flex-direction: column; }
+  .result-thumb { width: 100%; height: auto; aspect-ratio: 1 / 1; max-height: 320px; }
+  .result-actions .btn-group { flex: 1 1 auto; }
+  .result-actions .dl-btn:not(.copy-link) { flex: 1; justify-content: center; }
+
+  /* roomier scroll areas */
+  .response { max-height: 60vh; }
+  .history-list { max-height: 300px; }
+
+  /* modal full-ish height */
+  .modal { padding: 12px; align-items: flex-end; }
+  .modal-card { max-height: 90vh; border-radius: 18px 18px 0 0; }
+}
+
+/* very small phones */
+@media (max-width: 380px) {
+  .brand h1 { font-size: 22px; letter-spacing: 2px; }
+  .tool-rail { gap: 8px; }
+  .tool-btn .t-name { font-size: 11px; }
+  .fab { width: 56px; height: 56px; font-size: 23px; }
+}
+
+/* standalone (installed) tweaks */
+@media (display-mode: standalone) {
+  /* hide the install button once running as an app */
+  #btn-install { display: none !important; }
+  body { overscroll-behavior-y: none; }
+}
+
+/* coarse-pointer (touch) devices: disable hover lifts that feel laggy */
+@media (hover: none) {
+  .tool-btn:hover { transform: none; }
+  .history-item:hover { transform: none; }
+  .dl-btn:hover { transform: none; }
+}

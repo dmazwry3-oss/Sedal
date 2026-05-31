@@ -78,11 +78,15 @@
     routeSeg: $("#route-seg"),
     historyList: $("#history-list"), historyCount: $("#history-count"), historyClear: $("#history-clear"),
     help: $("#help"), btnHelp: $("#btn-help"), helpClose: $("#help-close"),
+    btnInstall: $("#btn-install"), btnLite: $("#btn-lite"), fab: $("#fab-inject"),
   };
 
+  const LITE_KEY = "xemoz_lite_v1";
   let active = TOOLS[0];
   let route = localStorage.getItem(ROUTE_KEY) || "auto";
   let busy = false;
+  let deferredPrompt = null;
+  let liteMode = localStorage.getItem(LITE_KEY) === "1";
 
   /* ===================================================================
      TOOL RAIL
@@ -270,16 +274,31 @@
       renderResults(result.data);
       pushHistory(val, "ok");
       toast("✓ injection complete", "ok");
+      haptic([18, 40, 18]);
+      scrollToResults();
     } else {
       setStatus("err", "FAILED");
       el.routeUsed.textContent = "—";
       renderError(lastErr);
       pushHistory(val, "err");
       toast("✕ injection failed", "err");
+      haptic([60, 30, 60]);
+      scrollToResults();
     }
 
     setLoading(false);
     busy = false;
+  }
+
+  // Smooth-scroll the response panel into view on small screens
+  function scrollToResults() {
+    if (window.innerWidth <= 900) {
+      const panel = document.querySelector(".panel-response");
+      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+  function haptic(pattern) {
+    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch {}
   }
 
   function renderError(err) {
@@ -303,6 +322,12 @@
     el.inject.classList.toggle("is-loading", on);
     el.inject.querySelector(".btn-inject-label").textContent = on ? "⏳ INJECTING…" : "⏻ EXECUTE INJECTION";
     el.progress.classList.toggle("active", on);
+    if (el.fab) {
+      el.fab.classList.toggle("is-loading", on);
+      el.fab.disabled = on;
+      el.fab.querySelector(".fab-icon").textContent = on ? "◌" : "⏻";
+    }
+    if (on) haptic(12);
   }
   function setStatus(kind, text) {
     el.respStatus.className = "status-chip " + kind;
@@ -579,22 +604,19 @@
     }
   }
 
-  /* ---------- matrix rain ---------- */
-  function initMatrix() {
-    const canvas = $("#matrix");
-    const ctx = canvas.getContext("2d");
-    const chars = "01アカサタナハマ<>{}[]#/$%&*".split("");
-    let drops, fontSize = 14;
+  /* ---------- matrix rain (controllable for lite mode) ---------- */
+  const matrix = (() => {
+    let timer = null, canvas, ctx, drops, fontSize = 14, ready = false;
     function resize() {
+      if (!canvas) return;
       canvas.width = window.innerWidth; canvas.height = window.innerHeight;
       drops = Array(Math.floor(canvas.width / fontSize)).fill(1);
     }
-    resize();
-    window.addEventListener("resize", resize);
     function draw() {
+      const chars = "01アカサタナハマ<>{}[]#/$%&*";
       ctx.fillStyle = "rgba(5,7,13,0.08)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent") || "#00f0ff";
+      ctx.fillStyle = (getComputedStyle(document.documentElement).getPropertyValue("--accent") || "#00f0ff").trim();
       ctx.font = fontSize + "px monospace";
       for (let i = 0; i < drops.length; i++) {
         ctx.fillText(chars[(Math.random() * chars.length) | 0], i * fontSize, drops[i] * fontSize);
@@ -602,7 +624,101 @@
         drops[i]++;
       }
     }
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) setInterval(draw, 60);
+    function start() {
+      if (timer) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (!ready) {
+        canvas = $("#matrix"); ctx = canvas.getContext("2d");
+        resize(); window.addEventListener("resize", resize); ready = true;
+      }
+      timer = setInterval(draw, 60);
+    }
+    function stop() {
+      if (timer) { clearInterval(timer); timer = null; }
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    return { start, stop };
+  })();
+
+  /* ---------- lite mode ---------- */
+  function applyLite(on, announce) {
+    liteMode = on;
+    document.body.classList.toggle("lite", on);
+    el.btnLite.setAttribute("aria-pressed", String(on));
+    el.btnLite.textContent = on ? "✧ LITE" : "✦ FX";
+    localStorage.setItem(LITE_KEY, on ? "1" : "0");
+    if (on) matrix.stop(); else matrix.start();
+    if (announce) toast(on ? "lite mode ON · FX disabled" : "full FX restored", "ok");
+  }
+
+  /* ---------- service worker ---------- */
+  function registerSW() {
+    if (!("serviceWorker" in navigator)) return;
+    if (location.protocol !== "https:" && location.hostname !== "localhost") return;
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        log("service worker registered · offline ready", "ok");
+        reg.addEventListener("updatefound", () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener("statechange", () => {
+            if (sw.state === "installed" && navigator.serviceWorker.controller) {
+              toast("⟳ update ready — reload to refresh", "ok");
+            }
+          });
+        });
+      }).catch((e) => log("sw register failed: " + e.message, "warn"));
+    });
+  }
+
+  /* ---------- install (A2HS) prompt ---------- */
+  function initInstall() {
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      el.btnInstall.hidden = false;
+      log("install available — tap ⤓ INSTALL", "ok");
+    });
+    el.btnInstall.addEventListener("click", async () => {
+      if (!deferredPrompt) { toast("use browser menu → Add to Home Screen"); return; }
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      log(`install prompt: ${outcome}`, outcome === "accepted" ? "ok" : "warn");
+      deferredPrompt = null;
+      el.btnInstall.hidden = true;
+    });
+    window.addEventListener("appinstalled", () => {
+      el.btnInstall.hidden = true;
+      toast("⚡ XEMOZ installed", "ok");
+      log("app installed", "ok");
+    });
+  }
+
+  /* ---------- share target / deep-link prefill ---------- */
+  function firstUrl(str) {
+    if (!str) return "";
+    const m = String(str).match(/https?:\/\/[^\s"']+/i);
+    return m ? m[0] : "";
+  }
+  function handleLaunchParams() {
+    const p = new URLSearchParams(location.search);
+    // shortcut / explicit tool selection
+    const toolParam = (p.get("tool") || "").toLowerCase();
+    if (toolParam && TOOLS.some((t) => t.id === toolParam)) selectTool(toolParam, true);
+
+    // Web Share Target sends url / text / title; deep links may use ?u= or ?url=
+    const shared = firstUrl(p.get("url")) || firstUrl(p.get("text")) ||
+                   firstUrl(p.get("u")) || firstUrl(p.get("q"));
+    if (shared) {
+      el.input.value = shared;
+      refreshMeta(); // auto-detects the right tool
+      toast("↡ shared link loaded", "ok");
+      log(`shared link received: ${truncate(shared, 50)}`, "ok");
+      // auto-run shared links shortly after load
+      setTimeout(() => inject(), 600);
+      // clean the URL so a refresh doesn't re-trigger
+      if (history.replaceState) history.replaceState(null, "", location.pathname);
+    }
   }
 
   /* ---------- help modal ---------- */
@@ -664,11 +780,19 @@
     el.helpClose.addEventListener("click", () => toggleHelp(false));
     el.help.addEventListener("click", (e) => { if (e.target === el.help) toggleHelp(false); });
 
+    // mobile FAB + lite toggle
+    el.fab.addEventListener("click", inject);
+    el.btnLite.addEventListener("click", () => applyLite(!liteMode, true));
+
     tickClock(); setInterval(tickClock, 1000);
     probeNet();
     window.addEventListener("online", probeNet);
     window.addEventListener("offline", probeNet);
-    initMatrix();
+
+    applyLite(liteMode, false);   // starts/stops matrix based on saved pref
+    registerSW();
+    initInstall();
+    handleLaunchParams();         // share target / deep links / ?tool=
 
     log("console ready. select an endpoint and inject a link.", "ok");
     log(`route mode: ${route.toUpperCase()} · proxy: ${PROXY_URL}`);

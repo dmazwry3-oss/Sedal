@@ -1,0 +1,57 @@
+{
+  "name": "XEMOZ // Media Injection Console",
+  "short_name": "XEMOZ",
+  "description": "Cyberpunk downloader console for Instagram, Spotify, TikTok and Twitter/X.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "id": "/?source=pwa",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#05070d",
+  "theme_color": "#05070d",
+  "categories": ["utilities", "productivity", "entertainment"],
+  "icons": [
+    {
+      "src": "/assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Instagram downloader",
+      "short_name": "Instagram",
+      "url": "/?tool=instagram&source=shortcut"
+    },
+    {
+      "name": "TikTok downloader",
+      "short_name": "TikTok",
+      "url": "/?tool=tiktok&source=shortcut"
+    },
+    {
+      "name": "Spotify downloader",
+      "short_name": "Spotify",
+      "url": "/?tool=spotify&source=shortcut"
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}

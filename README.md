@@ -14,6 +14,11 @@ INJECTION**, and the console resolves downloadable media from:
 
 ## ✨ Features
 
+- **📱 Installable PWA** — add it to your home screen and run it fullscreen like
+  a native app. Works **offline** (the app shell is cached by a service worker).
+- **🔗 Share Target** — once installed on mobile, share an Instagram / TikTok / X
+  link straight from those apps into XEMOZ via the system share sheet; it
+  auto-fills, auto-detects the service and runs.
 - **Smart auto-detect** — paste any link and the matching endpoint is selected
   automatically.
 - **AUTO / PROXY / DIRECT routing** — choose how requests are sent:
@@ -29,6 +34,9 @@ INJECTION**, and the console resolves downloadable media from:
 - **Syntax-highlighted RAW_OUTPUT** with clickable URLs.
 - **Keyboard shortcuts** — `Enter` run · `Ctrl/⌘+K` focus · `Esc` clear ·
   `1–5` switch endpoint.
+- **Mobile-first** — thumb-reachable floating action button, big touch targets,
+  safe-area insets for notched phones, no iOS focus-zoom, haptic feedback, and a
+  **lite mode** (✦ FX) that disables the matrix rain to save battery.
 - **Terminal FX** — glitch title, scanlines, matrix rain, live clock, network
   probe, activity log, top progress bar, toasts.
 - Fully **responsive** and respects `prefers-reduced-motion`.
@@ -77,9 +85,12 @@ python3 -m http.server 8080   # open http://localhost:8080
 ```
 .
 ├── index.html               # console layout
-├── css/style.css            # cyberpunk theme
-├── js/app.js                # routing, auto-detect, history, rendering
-├── netlify.toml             # Netlify config + redirects
+├── css/style.css            # cyberpunk theme + mobile/PWA styles
+├── js/app.js                # routing, auto-detect, history, PWA, rendering
+├── manifest.webmanifest     # PWA manifest (installable + share target)
+├── sw.js                    # service worker (offline shell cache)
+├── assets/icon.svg          # app icon (any + maskable)
+├── netlify.toml             # Netlify config + redirects + headers
 ├── netlify/functions/
 │   └── proxy.js             # serverless CORS proxy (whitelisted services)
 └── README.md

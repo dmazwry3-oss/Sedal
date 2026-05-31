@@ -43,6 +43,26 @@
   [headers.values]
     Cache-Control = "public, max-age=3600"
 
+# Service worker must be revalidated every load and allowed root scope
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+    Service-Worker-Allowed = "/"
+
+# Web app manifest
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=86400"
+
+# Icons / static assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
 [functions]
   # Bundle with esbuild for fast cold starts
   node_bundler = "esbuild"

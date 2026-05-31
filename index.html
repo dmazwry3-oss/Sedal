@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="XEMOZ // MEDIA INJECTION CONSOLE — download media from Instagram, Spotify, TikTok and Twitter/X through a slick cyberpunk API terminal. Deployable to Netlify with a built-in CORS proxy." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="XEMOZ // MEDIA INJECTION CONSOLE — download media from Instagram, Spotify, TikTok and Twitter/X through a slick cyberpunk API terminal. Installable PWA, deployable to Netlify with a built-in CORS proxy." />
   <meta name="theme-color" content="#05070d" />
   <title>XEMOZ // MEDIA INJECTION CONSOLE</title>
 
@@ -12,11 +12,20 @@
   <meta property="og:description" content="A cyberpunk downloader console for Instagram, Spotify, TikTok & Twitter/X." />
   <meta property="og:type" content="website" />
 
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="XEMOZ" />
+  <link rel="apple-touch-icon" href="/assets/icon.svg" />
+  <link rel="mask-icon" href="/assets/icon.svg" color="#00f0ff" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%A1</text></svg>" />
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml" />
 </head>
 <body>
   <!-- FX overlays -->
@@ -49,6 +58,8 @@
           <button class="seg-btn"        data-route="proxy"  title="Netlify serverless proxy (no CORS)">PROXY</button>
           <button class="seg-btn"        data-route="direct" title="Browser → API directly">DIRECT</button>
         </div>
+        <button class="pill pill-btn" id="btn-install" title="Install app" hidden>⤓ INSTALL</button>
+        <button class="pill pill-btn" id="btn-lite" title="Toggle lite mode (less FX, saves battery)" aria-pressed="false">✦ FX</button>
         <button class="pill pill-btn" id="btn-help" title="Keyboard shortcuts & help" aria-label="Help">?</button>
       </div>
     </header>
@@ -204,9 +215,21 @@
         <p>Push to GitHub → import the repo on <b>Netlify</b>. The included
            <code>netlify.toml</code> + <code>netlify/functions/proxy.js</code>
            wire everything up automatically — no build step.</p>
+        <h4>MOBILE</h4>
+        <p>Tap <b>⤓ INSTALL</b> (or your browser's "Add to Home Screen") to run
+           XEMOZ fullscreen like a native app — it even works offline.</p>
+        <p>Once installed you can <b>share a link straight from Instagram / TikTok /
+           X</b> into XEMOZ via the system share sheet.</p>
+        <p>Tap <b>✦ FX</b> to toggle lite mode (disables the matrix rain) to save
+           battery on older phones.</p>
       </div>
     </div>
   </div>
+
+  <!-- Mobile floating action button -->
+  <button class="fab" id="fab-inject" title="Execute injection" aria-label="Execute injection">
+    <span class="fab-icon">⏻</span>
+  </button>
 
   <!-- Toast -->
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
