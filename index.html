@@ -3,9 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="XEMOZ // MEDIA INJECTION CONSOLE — download media from Instagram, Spotify, TikTok and Twitter/X through a slick cyberpunk API terminal." />
+  <meta name="description" content="XEMOZ // MEDIA INJECTION CONSOLE — download media from Instagram, Spotify, TikTok and Twitter/X through a slick cyberpunk API terminal. Deployable to Netlify with a built-in CORS proxy." />
   <meta name="theme-color" content="#05070d" />
   <title>XEMOZ // MEDIA INJECTION CONSOLE</title>
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="XEMOZ // Media Injection Console" />
+  <meta property="og:description" content="A cyberpunk downloader console for Instagram, Spotify, TikTok & Twitter/X." />
+  <meta property="og:type" content="website" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -18,88 +24,124 @@
   <div class="fx-vignette" aria-hidden="true"></div>
   <canvas id="matrix" class="fx-matrix" aria-hidden="true"></canvas>
 
+  <!-- top progress bar -->
+  <div class="progress" id="progress" aria-hidden="true"><span></span></div>
+
   <div class="shell">
     <!-- ============ HEADER ============ -->
     <header class="topbar">
       <div class="brand">
         <span class="brand-bolt">⚡</span>
-        <h1 class="glitch" data-text="XEMOZ">XEMOZ</h1>
-        <span class="brand-sub">// MEDIA&nbsp;INJECTION&nbsp;CONSOLE</span>
+        <div class="brand-text">
+          <h1 class="glitch" data-text="XEMOZ">XEMOZ</h1>
+          <span class="brand-sub">// MEDIA&nbsp;INJECTION&nbsp;CONSOLE</span>
+        </div>
       </div>
+
       <div class="status-cluster">
-        <span class="pill" id="clock">--:--:--</span>
-        <span class="pill pill-live"><i class="dot"></i> NET&nbsp;<span id="net-state">PROBE</span></span>
-        <span class="pill">v2.0</span>
+        <span class="pill" id="clock" title="Local time">--:--:--</span>
+        <span class="pill pill-live" title="Upstream reachability">
+          <i class="dot"></i> NET&nbsp;<span id="net-state">PROBE</span>
+        </span>
+        <!-- route segmented control -->
+        <div class="seg" id="route-seg" role="group" aria-label="Request route">
+          <button class="seg-btn active" data-route="auto"   title="Try proxy, fall back to direct">AUTO</button>
+          <button class="seg-btn"        data-route="proxy"  title="Netlify serverless proxy (no CORS)">PROXY</button>
+          <button class="seg-btn"        data-route="direct" title="Browser → API directly">DIRECT</button>
+        </div>
+        <button class="pill pill-btn" id="btn-help" title="Keyboard shortcuts & help" aria-label="Help">?</button>
       </div>
     </header>
 
     <!-- ============ TOOL SELECTOR ============ -->
-    <nav class="tool-rail" id="tool-rail" aria-label="Endpoint selector">
-      <!-- tool buttons injected by JS -->
-    </nav>
+    <nav class="tool-rail" id="tool-rail" aria-label="Endpoint selector"></nav>
 
     <main class="grid">
-      <!-- ============ LEFT: REQUEST BUILDER ============ -->
-      <section class="panel panel-request">
-        <div class="panel-head">
-          <span class="panel-tag">01</span>
-          <h2>REQUEST&nbsp;BUILDER</h2>
-          <span class="panel-led"></span>
-        </div>
+      <!-- ============ LEFT COLUMN ============ -->
+      <div class="col">
+        <!-- REQUEST BUILDER -->
+        <section class="panel panel-request">
+          <div class="panel-head">
+            <span class="panel-tag">01</span>
+            <h2>REQUEST&nbsp;BUILDER</h2>
+            <span class="panel-led"></span>
+          </div>
 
-        <div class="panel-body">
-          <div class="tool-headline">
-            <span class="tool-glyph" id="active-glyph">★</span>
-            <div>
-              <div class="tool-name" id="active-name">SELECT TOOL</div>
-              <div class="tool-desc" id="active-desc">Choose an endpoint above to begin.</div>
+          <div class="panel-body">
+            <div class="tool-headline">
+              <span class="tool-glyph" id="active-glyph">★</span>
+              <div class="tool-headline-text">
+                <div class="tool-name" id="active-name">SELECT TOOL</div>
+                <div class="tool-desc" id="active-desc">Choose an endpoint above to begin.</div>
+              </div>
+            </div>
+
+            <label class="field-label" for="target-input">
+              <span class="prompt">&gt;</span> INPUT&nbsp;TARGET&nbsp;<em id="param-hint">[ q ]</em>
+              <span class="detect-badge" id="detect-badge" hidden></span>
+            </label>
+            <div class="input-wrap">
+              <input
+                id="target-input"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="paste a link here…"
+              />
+              <button class="btn-paste" id="btn-paste" title="Paste from clipboard" aria-label="Paste">⧉</button>
+              <button class="btn-clear" id="btn-clear" title="Clear (Esc)" aria-label="Clear input">✕</button>
+            </div>
+
+            <div class="quick-row" id="quick-row"></div>
+
+            <button class="btn-inject" id="btn-inject">
+              <span class="btn-inject-glow"></span>
+              <span class="btn-inject-label">⏻ EXECUTE INJECTION</span>
+            </button>
+
+            <div class="meta-block">
+              <div class="meta-line">
+                <span class="meta-key">[ TARGET_URL ]</span>
+                <button class="copy" data-copy-target="#target-url" title="Copy URL">COPY</button>
+              </div>
+              <code class="meta-val" id="target-url">// build a request…</code>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-block">
+                <div class="meta-line">
+                  <span class="meta-key">[ PAYLOAD_SAMPLE ]</span>
+                  <button class="copy" data-copy-target="#payload-sample" title="Copy payload">COPY</button>
+                </div>
+                <pre class="meta-val code" id="payload-sample">{ }</pre>
+              </div>
+
+              <div class="meta-block">
+                <div class="meta-line"><span class="meta-key">[ PARAMETERS ]</span></div>
+                <code class="meta-val" id="params-key">.q</code>
+                <code class="meta-val dim" id="params-val">—</code>
+              </div>
             </div>
           </div>
+        </section>
 
-          <label class="field-label" for="target-input">
-            <span class="prompt">&gt;</span> INPUT&nbsp;TARGET&nbsp;<em id="param-hint">[ q ]</em>
-          </label>
-          <div class="input-wrap">
-            <input
-              id="target-input"
-              type="text"
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="paste a link here…"
-            />
-            <button class="btn-clear" id="btn-clear" title="Clear" aria-label="Clear input">✕</button>
-          </div>
-
-          <div class="quick-row" id="quick-row"></div>
-
-          <button class="btn-inject" id="btn-inject">
-            <span class="btn-inject-glow"></span>
-            <span class="btn-inject-label">⏻ EXECUTE INJECTION</span>
-          </button>
-
-          <div class="meta-block">
-            <div class="meta-line">
-              <span class="meta-key">[ TARGET_URL ]</span>
-              <button class="copy" data-copy-target="#target-url" title="Copy URL">COPY</button>
+        <!-- HISTORY -->
+        <section class="panel panel-history">
+          <div class="panel-head">
+            <span class="panel-tag">03</span>
+            <h2>HISTORY</h2>
+            <div class="head-actions">
+              <span class="status-chip" id="history-count">0</span>
+              <button class="copy danger" id="history-clear" title="Clear history">CLEAR</button>
             </div>
-            <code class="meta-val" id="target-url">// build a request…</code>
           </div>
-
-          <div class="meta-block">
-            <div class="meta-line">
-              <span class="meta-key">[ PAYLOAD_SAMPLE ]</span>
-              <button class="copy" data-copy-target="#payload-sample" title="Copy payload">COPY</button>
+          <div class="panel-body">
+            <div class="history-list" id="history-list">
+              <div class="history-empty">// no requests yet — your injections will be logged here.</div>
             </div>
-            <pre class="meta-val code" id="payload-sample">{ }</pre>
           </div>
-
-          <div class="meta-block">
-            <div class="meta-line"><span class="meta-key">[ PARAMETERS ]</span></div>
-            <code class="meta-val" id="params-key">.q</code>
-            <code class="meta-val dim" id="params-val">—</code>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <!-- ============ RIGHT: RESPONSE ============ -->
       <section class="panel panel-response">
@@ -107,6 +149,8 @@
           <span class="panel-tag">02</span>
           <h2>RESPONSE&nbsp;STREAM</h2>
           <div class="head-actions">
+            <span class="status-chip route" id="route-used" title="Route used">—</span>
+            <span class="status-chip" id="resp-time" hidden>0ms</span>
             <span class="status-chip" id="resp-status">IDLE</span>
             <button class="copy" data-copy-target="#response-json" id="btn-copy-json" title="Copy JSON">COPY_JSON</button>
           </div>
@@ -130,10 +174,38 @@
     <footer class="footer">
       <div class="log" id="log"><span class="log-line">[sys] console ready. awaiting operator input.</span></div>
       <div class="footer-note">
-        built for <strong>operator</strong> · endpoints proxied to
-        <code>api-xemoz-official.my.id</code> · use responsibly
+        built for <strong>operator</strong> · endpoints routed through
+        <code>api-xemoz-official.my.id</code> · deploy-ready for
+        <strong>Netlify</strong> · use responsibly
       </div>
     </footer>
+  </div>
+
+  <!-- ============ HELP MODAL ============ -->
+  <div class="modal" id="help" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>⌘ CONSOLE&nbsp;MANUAL</h3>
+        <button class="modal-close" id="help-close" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <h4>SHORTCUTS</h4>
+        <ul class="kbd-list">
+          <li><kbd>Enter</kbd> execute injection</li>
+          <li><kbd>Ctrl</kbd>+<kbd>K</kbd> focus the input</li>
+          <li><kbd>Esc</kbd> clear input / close this panel</li>
+          <li><kbd>1</kbd>–<kbd>5</kbd> switch endpoint</li>
+        </ul>
+        <h4>ROUTING</h4>
+        <p><b>AUTO</b> — try the Netlify proxy first, fall back to a direct browser call.</p>
+        <p><b>PROXY</b> — always use the serverless function (<code>/api/proxy</code>). No CORS issues. Requires Netlify deploy.</p>
+        <p><b>DIRECT</b> — call the API straight from your browser. Fast, but may be blocked by CORS.</p>
+        <h4>DEPLOY</h4>
+        <p>Push to GitHub → import the repo on <b>Netlify</b>. The included
+           <code>netlify.toml</code> + <code>netlify/functions/proxy.js</code>
+           wire everything up automatically — no build step.</p>
+      </div>
+    </div>
   </div>
 
   <!-- Toast -->
