@@ -29,7 +29,7 @@
       <div class="status-cluster">
         <span class="pill" id="clock">--:--:--</span>
         <span class="pill pill-live"><i class="dot"></i> NET&nbsp;<span id="net-state">PROBE</span></span>
-        <span class="pill">v2.0</span>
+        <span class="pill">v2.1</span>
       </div>
     </header>
 
@@ -59,7 +59,7 @@
           <label class="field-label" for="target-input">
             <span class="prompt">&gt;</span> INPUT&nbsp;TARGET&nbsp;<em id="param-hint">[ q ]</em>
           </label>
-          <div class="input-wrap">
+          <div class="input-wrap" id="input-wrap">
             <input
               id="target-input"
               type="text"
@@ -71,6 +71,32 @@
           </div>
 
           <div class="quick-row" id="quick-row"></div>
+
+          <!-- ===== IMAGE UPLOAD ZONE (image tools only) ===== -->
+          <div class="upload-zone" id="upload-zone" hidden>
+            <input type="file" id="file-input" accept="image/*" hidden />
+
+            <!-- empty / drop state -->
+            <div class="dz-empty" id="dz-empty">
+              <div class="dz-icon">🖼️</div>
+              <div class="dz-title">DROP IMAGE&nbsp;//&nbsp;TAP TO BROWSE</div>
+              <div class="dz-hint">PNG · JPG · WEBP · GIF — max 20&nbsp;MB</div>
+              <button type="button" class="dz-browse" id="dz-browse">⊕ SELECT FILE</button>
+            </div>
+
+            <!-- preview state -->
+            <div class="dz-preview" id="dz-preview" hidden>
+              <img class="dz-thumb" id="dz-thumb" alt="selected image preview" />
+              <div class="dz-file">
+                <div class="dz-fname" id="dz-fname">image.png</div>
+                <div class="dz-fmeta" id="dz-fmeta">—</div>
+                <div class="dz-progress" id="dz-progress" hidden>
+                  <span class="dz-bar" id="dz-bar"></span>
+                </div>
+              </div>
+              <button type="button" class="dz-remove" id="dz-remove" title="Remove image" aria-label="Remove image">✕</button>
+            </div>
+          </div>
 
           <button class="btn-inject" id="btn-inject">
             <span class="btn-inject-glow"></span>
@@ -131,7 +157,7 @@
       <div class="log" id="log"><span class="log-line">[sys] console ready. awaiting operator input.</span></div>
       <div class="footer-note">
         built for <strong>operator</strong> · endpoints proxied to
-        <code>api-xemoz-official.my.id</code> · use responsibly
+        <code>api-xemoz-official.my.id</code> · image host via <code>catbox.moe</code> · use responsibly
       </div>
     </footer>
   </div>
