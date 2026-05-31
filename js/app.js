@@ -329,6 +329,20 @@
     catch { return { data: raw, kind: undefined }; }
   }
 
+  // One round-trip: Netlify proxy first, then a direct browser call as a
+  // fallback. Returns { data, kind } or throws.
+  async function fetchResult(value) {
+    try {
+      return await callProxy(value);
+    } catch (e1) {
+      try {
+        return await callDirect(value);
+      } catch (e2) {
+        throw (e2.message?.includes("HTTP") || /CORS|fetch|network/i.test(e2.message || "")) ? e2 : e1;
+      }
+    }
+  }
+
   /* ===================================================================
      IMAGE UPLOAD (pick / drop / paste -> compress -> host)
      =================================================================== */
@@ -470,16 +484,30 @@
       return;
     }
 
+    // Fetch with light auto-retry: gateway hiccups (502/503/504/timeout) from
+    // the upstream API are usually transient, so try a couple more times with
+    // a short backoff before giving up.
     let result = null, err = null;
-    try {
-      result = await callProxy(val);              // try Netlify proxy first
-    } catch (e1) {
-      try { result = await callDirect(val); }     // fall back to direct browser call
-      catch (e2) { err = e2.message?.includes("HTTP") || /CORS|fetch|network/i.test(e2.message) ? e2 : e1; }
+    const MAX_ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      err = null;
+      try {
+        result = await fetchResult(val);
+      } catch (e) {
+        result = null; err = e;
+      }
+      if (!isTransientFailure(result, err) || attempt === MAX_ATTEMPTS) break;
+      toast(`Server sumber sibuk — mencoba lagi (${attempt}/${MAX_ATTEMPTS - 1})…`, "err");
+      await sleep(800 * attempt);
     }
 
     if (result == null || result.data == null) {
-      renderError(err || new Error("Tidak ada respons dari server."));
+      const m = (err && err.message) || "";
+      if (/\b(429|50[234])\b|error code:\s*5\d\d|bad gateway|gateway time-?out|service unavailable|timeout|timed out/i.test(m)) {
+        renderError(new Error(classifyErrorDetail(m)), null, true);   // friendly + retry tips
+      } else {
+        renderError(err || new Error("Tidak ada respons dari server."));
+      }
       haptic([50, 30, 50]);
     } else {
       const { data, kind } = result;
@@ -503,6 +531,9 @@
   }
 
   function apiErrorMessage(data) {
+    // Some upstreams reply with a plain-text gateway error (e.g. Cloudflare's
+    // "error code: 502") instead of JSON — catch those too.
+    if (typeof data === "string") return gatewayErrorMessage(data);
     if (typeof data !== "object" || data === null) return "";
     const nodes = [data, data.result, data.data].filter((n) => n && typeof n === "object");
     let failed = false, detail = "";
@@ -512,11 +543,42 @@
       if (msg && typeof msg === "string" && !detail) detail = msg;
     }
     if (!failed) return "";
-    if (/404|not found/i.test(detail)) return "Konten tidak ditemukan (404) — link mungkin salah, sudah dihapus, atau privat.";
-    if (/internal server error|500/i.test(detail)) return "Server sumber sedang bermasalah (Internal Server Error). Coba lagi sebentar lagi.";
-    if (/timeout|timed out|504/i.test(detail)) return "Server sumber lama merespons (timeout). Coba lagi.";
-    if (/rate|too many|429/i.test(detail)) return "Terlalu banyak permintaan ke server (rate limit). Tunggu sebentar lalu coba lagi.";
-    return detail || "Server sumber menolak permintaan ini.";
+    return classifyErrorDetail(detail);
+  }
+
+  // Recognise a plain-text gateway/server error body. Returns a friendly
+  // message, or "" if the text doesn't look like an error (e.g. a real URL).
+  function gatewayErrorMessage(text) {
+    const t = String(text || "").trim();
+    if (!t || t.length > 300) return "";   // long bodies are likely real content
+    if (/error code:\s*\d{3}|bad gateway|gateway time-?out|service unavailable|internal server error|temporarily unavailable|too many requests/i.test(t)) {
+      return classifyErrorDetail(t);
+    }
+    return "";
+  }
+
+  // Map an upstream error detail to a clear Indonesian message.
+  function classifyErrorDetail(detail) {
+    const d = String(detail || "");
+    if (/error code:\s*502|\b502\b|bad gateway/i.test(d)) return "Server sumber sedang bermasalah (502 Bad Gateway). Ini di sisi penyedia API dan biasanya hanya sementara — coba lagi sebentar lagi.";
+    if (/error code:\s*503|\b503\b|service unavailable|temporarily unavailable/i.test(d)) return "Server sumber sedang tidak tersedia (503). Coba lagi sebentar lagi.";
+    if (/error code:\s*504|\b504\b|timeout|timed out|gateway time-?out/i.test(d)) return "Server sumber lama merespons (timeout/504). Coba lagi.";
+    if (/internal server error|\b500\b/i.test(d)) return "Server sumber sedang bermasalah (Internal Server Error 500). Coba lagi sebentar lagi.";
+    if (/\b404\b|not found/i.test(d)) return "Konten/gambar tidak ditemukan (404) — pastikan gambar valid lalu coba lagi.";
+    if (/rate|too many|\b429\b/i.test(d)) return "Terlalu banyak permintaan ke server (rate limit). Tunggu sebentar lalu coba lagi.";
+    return d || "Server sumber menolak permintaan ini.";
+  }
+
+  // Is this failure a transient upstream/gateway hiccup worth one more try?
+  function isTransientFailure(result, err) {
+    const RX_TRANSIENT = /\b(429|50[234])\b|error code:\s*5\d\d|timeout|timed out|failed to fetch|network ?error|load failed|upstream_(timeout|unreachable)|bad gateway|gateway time-?out|service unavailable/i;
+    if (!result || result.data == null) {
+      return RX_TRANSIENT.test((err && err.message) || "");
+    }
+    const success = result.kind === "image" || hasMedia(result.data) ||
+      (active.category === "image" && findResultImage(result.data));
+    if (success) return false;
+    return RX_TRANSIENT.test(apiErrorMessage(result.data));
   }
 
   function setLoading(on) {
@@ -755,7 +817,7 @@
           <li>Coba <b>lagi</b> beberapa saat — server sumber kadang sibuk.</li>
           ${active.id === "tiktok" ? "<li>Coba ganti ke tab <b>TikTok V2</b>.</li>" : ""}
           ${active.id === "tiktokv2" ? "<li>Coba ganti ke tab <b>TikTok</b> (yang utama).</li>" : ""}
-          ${active.category === "image" ? "<li>Pakai <b>URL gambar langsung</b> (diakhiri .jpg/.png) yang bisa diakses publik.</li>" : "<li>Pastikan kontennya <b>publik</b> dan link masih aktif.</li>"}
+          ${active.category === "image" ? "<li>Coba <b>unggah gambar lain</b> atau pakai <b>alat gambar lain</b> (mis. Remini ↔ HD Upscale).</li>" : "<li>Pastikan kontennya <b>publik</b> dan link masih aktif.</li>"}
         </ul>`;
     } else if (corsLike) {
       tips = `<p class="err-sub">Sepertinya situs ini belum berjalan di Netlify, jadi permintaan langsung dari browser diblokir (CORS). Deploy ke Netlify agar proxy aktif.</p>`;
@@ -886,6 +948,7 @@
   function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   function attr(s) { return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   function haptic(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch {} }
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   let toastTimer;
   function toast(msg, kind) {
     el.toast.textContent = msg;
