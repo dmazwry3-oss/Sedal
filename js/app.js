@@ -160,7 +160,6 @@
     toast: $("#toast"),
     btnInstall: $("#btn-install"),
     // upload UI
-    modeToggle: $("#mode-toggle"), modeUrl: $("#mode-url"), modeUpload: $("#mode-upload"),
     uploadZone: $("#upload-zone"), fileInput: $("#file-input"), dropArea: $("#drop-area"),
     dropEmpty: $("#drop-empty"), dropPreview: $("#drop-preview"),
     previewImg: $("#preview-img"), previewName: $("#preview-name"),
@@ -172,7 +171,6 @@
   let busy = false;
   let deferredPrompt = null;
   let extraValues = {};   // current values of the active tool's extra params
-  let inputMode = "url";  // "url" | "upload" (upload only for image tools)
   let uploaded = null;    // { hostedUrl, previewUrl, name } once an image is hosted
   let pendingFile = null; // selected file awaiting upload
 
@@ -215,31 +213,21 @@
     (active.extras || []).forEach((ex) => (extraValues[ex.key] = ex.default));
     buildOptions();
 
-    // image tools get the URL/Upload mode toggle and default to Upload (easier);
-    // downloaders are URL-only.
-    const isImage = active.category === "image";
-    el.modeToggle.hidden = !isImage;
-    setMode(isImage ? "upload" : "url");
+    // image tools are upload-only; downloaders are URL-only.
+    applyMode();
 
     if (!keepInputValue) setHint(active.tip);
   }
 
   /* ===================================================================
-     INPUT MODE (URL vs Upload) — image tools only
+     INPUT MODE — image tools are upload-only, downloaders are URL-only
      =================================================================== */
-  function setMode(mode) {
-    inputMode = mode;
-    applyMode();
-  }
   function applyMode() {
     const isImage = active.category === "image";
-    const uploadVisible = isImage && inputMode === "upload";
-    el.modeUrl.classList.toggle("active", inputMode === "url");
-    el.modeUpload.classList.toggle("active", inputMode === "upload");
-    el.box.hidden = uploadVisible;          // URL box
-    el.uploadZone.hidden = !uploadVisible;  // upload zone
+    el.box.hidden = isImage;           // URL box — downloaders only
+    el.uploadZone.hidden = !isImage;   // upload zone — image tools only
     // "coba contoh link" only makes sense for the URL box
-    if (el.sample) el.sample.hidden = uploadVisible;
+    if (el.sample) el.sample.hidden = isImage;
   }
 
   /* extra-parameter controls (scale / mode / level) */
@@ -443,7 +431,7 @@
      =================================================================== */
   // Resolve the value to send to the API based on the current input mode.
   async function getTargetValue() {
-    if (active.category === "image" && inputMode === "upload") {
+    if (active.category === "image") {
       return await ensureHosted();   // upload (if needed) then return hosted URL
     }
     return el.input.value.trim();
@@ -451,7 +439,7 @@
   async function startDownload() {
     if (busy) return;
 
-    const isUpload = active.category === "image" && inputMode === "upload";
+    const isUpload = active.category === "image";
     if (isUpload && !pendingFile && !(uploaded && uploaded.hostedUrl)) {
       toast("Pilih atau seret gambar dulu 🙂", "err");
       el.dropArea.focus();
@@ -930,10 +918,6 @@
     el.sample.addEventListener("click", () => { el.input.value = active.sample; autoDetect(); el.input.focus(); });
     el.recentClear.addEventListener("click", () => { saveRecent([]); renderRecent(); toast("Riwayat dibersihkan"); });
 
-    // ---- input-mode toggle ----
-    el.modeUrl.addEventListener("click", () => setMode("url"));
-    el.modeUpload.addEventListener("click", () => setMode("upload"));
-
     // ---- upload: browse / drag-drop / paste ----
     el.btnProcess.addEventListener("click", startDownload);
     el.dropArea.addEventListener("click", (e) => { if (!e.target.closest(".preview-remove")) el.fileInput.click(); });
@@ -951,9 +935,9 @@
       const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (file) handleFile(file);
     });
-    // paste an image while in upload mode
+    // paste an image directly into an image tool
     window.addEventListener("paste", (e) => {
-      if (!(active.category === "image" && inputMode === "upload")) return;
+      if (active.category !== "image") return;
       const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
       if (item) { const f = item.getAsFile(); if (f) { handleFile(f); toast("Gambar dari clipboard ditempel", "ok"); } }
     });

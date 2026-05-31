@@ -26,10 +26,10 @@ deploy-ready for Netlify.
 | Wink        | `tools/image/wink.php`      | `url`, `mode` (ultrahd/…) |
 | ToPixel     | `tools/image/topixel.php`   | `url`, `level` (10–50) |
 
-> **Upload support:** image tools accept either a direct image URL **or an
-> uploaded file**. Files are compressed in-browser, sent to the Netlify
-> `upload` function, hosted on a public image host (catbox → uguu → 0x0), and
-> the resulting URL is passed to the tool.
+> **Image upload:** image tools take an **uploaded file** (upload-only — no
+> URL field). Files are compressed in-browser, sent to the Netlify `upload`
+> function, hosted on a public image host (catbox → uguu → 0x0), and the
+> resulting URL is passed to the tool.
 
 ## ✨ Features
 
