@@ -339,21 +339,6 @@ img, video { max-width: 100%; display: block; }
 
 
 /* =====================================================================
-   INPUT MODE TOGGLE (URL vs Upload)  —  image tools
-   ===================================================================== */
-.mode-toggle {
-  display: inline-flex; gap: 4px; margin: 0 auto 14px; padding: 4px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 13px;
-}
-.mode-btn {
-  font-family: var(--font); font-weight: 600; font-size: 13.5px; cursor: pointer;
-  padding: 9px 18px; border-radius: 10px; border: none; background: transparent;
-  color: var(--txt-mut); transition: all .18s;
-}
-.mode-btn:hover { color: var(--txt); }
-.mode-btn.active { color: #fff; background: var(--grad); box-shadow: 0 6px 16px -8px rgba(124,92,255,.7); }
-
-/* =====================================================================
    UPLOAD ZONE
    ===================================================================== */
 .upload-zone { display: flex; flex-direction: column; gap: 12px; }
@@ -403,8 +388,6 @@ img, video { max-width: 100%; display: block; }
 
 /* upload zone responsive */
 @media (max-width: 620px) {
-  .mode-toggle { width: 100%; }
-  .mode-btn { flex: 1; }
   .drop-preview img { width: 62px; height: 62px; }
 }
 @media (prefers-reduced-motion: reduce) {
