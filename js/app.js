@@ -70,6 +70,15 @@
       sample: "https://x.com/user/status/123",
       desc: "Download video & images attached to a Tweet / X status.",
     },
+    {
+      id: "imghost",
+      name: "IMG HOST",
+      tag: "UPLOAD → URL",
+      glyph: "🖼️",
+      accent: "#a78bfa",
+      mode: "upload",
+      desc: "Upload an image straight from your device (drag, browse or paste) and get a public direct link you can reuse anywhere.",
+    },
   ];
 
   /* ---------- DOM refs ---------- */
@@ -81,6 +90,7 @@
     desc: $("#active-desc"),
     paramHint: $("#param-hint"),
     input: $("#target-input"),
+    inputWrap: $("#input-wrap"),
     clear: $("#btn-clear"),
     quickRow: $("#quick-row"),
     inject: $("#btn-inject"),
@@ -97,9 +107,23 @@
     clock: $("#clock"),
     netState: $("#net-state"),
     netPill: $(".pill-live"),
+    // upload zone
+    uploadZone: $("#upload-zone"),
+    fileInput: $("#file-input"),
+    dzEmpty: $("#dz-empty"),
+    dzBrowse: $("#dz-browse"),
+    dzPreview: $("#dz-preview"),
+    dzThumb: $("#dz-thumb"),
+    dzFname: $("#dz-fname"),
+    dzFmeta: $("#dz-fmeta"),
+    dzProgress: $("#dz-progress"),
+    dzBar: $("#dz-bar"),
+    dzRemove: $("#dz-remove"),
   };
 
   let active = TOOLS[0];
+  let selectedFile = null;
+  let previewUrl = null;
 
   /* ===================================================================
      BUILD TOOL RAIL
@@ -128,24 +152,43 @@
     el.glyph.textContent = active.glyph;
     el.name.textContent = active.name;
     el.desc.textContent = active.desc;
-    el.paramHint.textContent = `[ ${active.param} ]`;
-    el.input.placeholder = active.placeholder;
     document.documentElement.style.setProperty("--active-accent", active.accent);
 
-    // quick sample chip
-    el.quickRow.innerHTML = "";
-    const chip = document.createElement("button");
-    chip.className = "quick-chip";
-    chip.textContent = "⌖ load sample";
-    chip.addEventListener("click", () => {
-      el.input.value = active.sample;
-      refreshMeta();
-      el.input.focus();
-    });
-    el.quickRow.appendChild(chip);
+    const isUpload = active.mode === "upload";
+
+    // toggle URL builder vs upload zone
+    el.inputWrap.hidden = isUpload;
+    el.quickRow.hidden = isUpload;
+    el.uploadZone.hidden = !isUpload;
+
+    if (isUpload) {
+      el.paramHint.textContent = "[ file ]";
+      clearFile();
+      log(`endpoint switched → image host (upload)`);
+    } else {
+      el.paramHint.textContent = `[ ${active.param} ]`;
+      el.input.placeholder = active.placeholder;
+
+      // quick sample chip
+      el.quickRow.innerHTML = "";
+      const chip = document.createElement("button");
+      chip.className = "quick-chip";
+      chip.textContent = "⌖ load sample";
+      chip.addEventListener("click", () => {
+        el.input.value = active.sample;
+        refreshMeta();
+        el.input.focus();
+      });
+      el.quickRow.appendChild(chip);
+      log(`endpoint switched → ${active.endpoint}`);
+    }
+
+    // reset response surface on tool change
+    el.results.hidden = true;
+    el.results.innerHTML = "";
+    setStatus("", "IDLE");
 
     refreshMeta();
-    log(`endpoint switched → ${active.endpoint}`);
   }
 
   /* ===================================================================
@@ -156,6 +199,22 @@
   }
 
   function refreshMeta() {
+    if (active.mode === "upload") {
+      el.targetUrl.textContent = `${UPLOADERS[0].url}  ·  multipart/form-data`;
+      const payloadObj = selectedFile
+        ? {
+            reqtype: "fileupload",
+            fileToUpload: selectedFile.name,
+            size: formatBytes(selectedFile.size),
+            type: selectedFile.type || "image/*",
+          }
+        : { reqtype: "fileupload", fileToUpload: "<select an image>" };
+      el.payload.textContent = JSON.stringify(payloadObj, null, 4);
+      el.paramsKey.textContent = ".fileToUpload";
+      el.paramsVal.textContent = selectedFile ? selectedFile.name : "—";
+      return;
+    }
+
     const val = el.input.value.trim();
     el.targetUrl.textContent = val
       ? buildUrl(val)
@@ -173,13 +232,15 @@
   let busy = false;
 
   async function inject() {
+    if (busy) return;
+    if (active.mode === "upload") return runUpload();
+
     const val = el.input.value.trim();
     if (!val) {
       toast("⚠ input target required", true);
       el.input.focus();
       return;
     }
-    if (busy) return;
     busy = true;
 
     const url = buildUrl(val);
@@ -238,9 +299,12 @@
   function setLoading(on) {
     el.inject.disabled = on;
     el.inject.classList.toggle("is-loading", on);
-    el.inject.querySelector(".btn-inject-label").textContent = on
-      ? "⏳ INJECTING"
-      : "⏻ EXECUTE INJECTION";
+    const label = el.inject.querySelector(".btn-inject-label");
+    if (active.mode === "upload") {
+      label.textContent = on ? "⬆ UPLOADING" : "⬆ UPLOAD & HOST IMAGE";
+    } else {
+      label.textContent = on ? "⏳ INJECTING" : "⏻ EXECUTE INJECTION";
+    }
   }
 
   function setStatus(kind, text) {
@@ -421,10 +485,286 @@
   }
 
   /* ===================================================================
+     IMAGE UPLOAD  (drag / browse / paste → public direct URL)
+     =================================================================== */
+  const MAX_UPLOAD = 20 * 1024 * 1024; // 20 MB
+
+  // Tried in order. Each parser turns the raw response into a direct URL.
+  const UPLOADERS = [
+    {
+      host: "catbox.moe",
+      url: "https://catbox.moe/user/api.php",
+      form: (file) => {
+        const fd = new FormData();
+        fd.append("reqtype", "fileupload");
+        fd.append("fileToUpload", file, file.name);
+        return fd;
+      },
+      parse: (text) => {
+        const u = (text || "").trim();
+        return /^https?:\/\//i.test(u) ? u : null;
+      },
+    },
+    {
+      host: "tmpfiles.org",
+      url: "https://tmpfiles.org/api/v1/upload",
+      form: (file) => {
+        const fd = new FormData();
+        fd.append("file", file, file.name);
+        return fd;
+      },
+      parse: (text) => {
+        try {
+          const u = JSON.parse(text)?.data?.url;
+          // convert page URL → direct download URL
+          return u ? u.replace("tmpfiles.org/", "tmpfiles.org/dl/") : null;
+        } catch {
+          return null;
+        }
+      },
+    },
+    {
+      host: "uguu.se",
+      url: "https://uguu.se/upload.php",
+      form: (file) => {
+        const fd = new FormData();
+        fd.append("files[]", file, file.name);
+        return fd;
+      },
+      parse: (text) => {
+        try {
+          return JSON.parse(text)?.files?.[0]?.url || null;
+        } catch {
+          return null;
+        }
+      },
+    },
+  ];
+
+  function formatBytes(n) {
+    if (!n && n !== 0) return "—";
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+    return (n / 1048576).toFixed(2) + " MB";
+  }
+
+  function handleFiles(list) {
+    const file = list && list[0];
+    if (!file) return;
+    if (!/^image\//i.test(file.type)) {
+      toast("✕ images only", true);
+      log(`rejected non-image file: ${file.name}`, "err");
+      return;
+    }
+    if (file.size > MAX_UPLOAD) {
+      toast("✕ file too large (max 20MB)", true);
+      log(`rejected oversized file: ${formatBytes(file.size)}`, "err");
+      return;
+    }
+    selectedFile = file;
+
+    // preview
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(file);
+    el.dzThumb.src = previewUrl;
+    el.dzFname.textContent = file.name;
+    el.dzFmeta.textContent = `${formatBytes(file.size)} · ${file.type || "image"}`;
+    el.dzProgress.hidden = true;
+    el.dzBar.style.width = "0%";
+    el.dzBar.classList.remove("indeterminate");
+
+    el.dzEmpty.hidden = true;
+    el.dzPreview.hidden = false;
+
+    refreshMeta();
+    setStatus("", "READY");
+    log(`image staged → ${file.name} (${formatBytes(file.size)})`, "ok");
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      previewUrl = null;
+    }
+    el.fileInput.value = "";
+    el.dzThumb.removeAttribute("src");
+    el.dzPreview.hidden = true;
+    el.dzEmpty.hidden = false;
+    el.dzProgress.hidden = true;
+    el.dzBar.style.width = "0%";
+    el.dzBar.classList.remove("indeterminate");
+    refreshMeta();
+  }
+
+  function xhrUpload(uploader, file, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", uploader.url, true);
+      xhr.responseType = "text";
+      xhr.timeout = 60000;
+      if (xhr.upload && onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+        };
+      }
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const url = uploader.parse(xhr.responseText);
+          url ? resolve(url) : reject(new Error(`${uploader.host}: no URL in response`));
+        } else {
+          reject(new Error(`${uploader.host}: HTTP ${xhr.status}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error(`${uploader.host}: network/CORS error`));
+      xhr.ontimeout = () => reject(new Error(`${uploader.host}: timed out`));
+      xhr.send(uploader.form(file));
+    });
+  }
+
+  async function runUpload() {
+    if (!selectedFile) {
+      toast("⚠ select an image first", true);
+      el.fileInput.click();
+      return;
+    }
+    busy = true;
+    setLoading(true);
+    setStatus("run", "UPLOADING");
+    el.results.hidden = true;
+    el.results.innerHTML = "";
+    el.respJson.innerHTML = `<span class="awaiting">// uploading image…</span>`;
+
+    el.dzProgress.hidden = false;
+    el.dzBar.style.width = "0%";
+    el.dzBar.classList.add("indeterminate");
+
+    const started = performance.now();
+    let lastErr = null;
+
+    for (const uploader of UPLOADERS) {
+      try {
+        log(`>> UPLOAD ${selectedFile.name} → ${uploader.host}`);
+        const url = await xhrUpload(uploader, selectedFile, (pct) => {
+          el.dzBar.classList.remove("indeterminate");
+          el.dzBar.style.width = pct + "%";
+        });
+        const ms = Math.round(performance.now() - started);
+        el.dzBar.classList.remove("indeterminate");
+        el.dzBar.style.width = "100%";
+        setStatus("ok", `HOSTED · ${ms}ms`);
+        log(`<< hosted on ${uploader.host} (${ms}ms)`, "ok");
+        renderHostResult(url, uploader.host);
+        toast("✓ image hosted — link ready");
+        return finishUpload();
+      } catch (err) {
+        lastErr = err;
+        log(`<< ${err.message} — trying next host…`, "warn");
+      }
+    }
+
+    // all uploaders failed
+    el.dzBar.classList.remove("indeterminate");
+    el.dzProgress.hidden = true;
+    setStatus("err", "FAILED");
+    el.respJson.innerHTML =
+      `<span class="tok-null">// UPLOAD FAILED</span>\n` +
+      `<span class="tok-bool">error:</span> ${escapeHtml(lastErr ? lastErr.message : "unknown")}\n\n` +
+      `<span class="tok-str">// All image hosts refused the request (often CORS / network).\n` +
+      `// Check your connection or try a different image.</span>`;
+    log(`<< upload failed on all hosts`, "err");
+    toast("✕ upload failed", true);
+    finishUpload();
+  }
+
+  function finishUpload() {
+    setLoading(false);
+    busy = false;
+  }
+
+  function renderHostResult(url, host) {
+    const data = { url, host, type: "image", size: formatBytes(selectedFile.size), name: selectedFile.name };
+    renderJson(data);
+
+    el.results.innerHTML = "";
+    el.results.hidden = false;
+
+    const card = document.createElement("div");
+    card.className = "result-card";
+    card.innerHTML = `
+      <img class="result-thumb" src="${escapeHtml(url)}" alt="hosted image"
+           loading="lazy" onerror="this.src='${previewUrl || ""}'" />
+      <div class="result-info">
+        <div class="result-title">${escapeHtml(selectedFile.name)}</div>
+        <div class="result-meta">🛰 hosted on <b>${escapeHtml(host)}</b></div>
+        <div class="result-meta">📦 <b>${formatBytes(selectedFile.size)}</b> · ${escapeHtml(selectedFile.type || "image")}</div>
+        <div class="host-link">
+          <code id="hosted-url">${escapeHtml(url)}</code>
+          <button class="copy" data-copy-target="#hosted-url" title="Copy link">COPY</button>
+        </div>
+        <div class="result-actions">
+          ${dlBtn(url, "⬇ DOWNLOAD", "")}
+          <a class="dl-btn alt" href="${url}" target="_blank" rel="noopener">↗ OPEN</a>
+        </div>
+      </div>`;
+    el.results.appendChild(card);
+    bindCopy(); // rebind for the freshly-added copy button
+    log(`direct link ready → ${truncate(url, 60)}`, "ok");
+  }
+
+  function bindUploadZone() {
+    // open picker
+    el.dzEmpty.addEventListener("click", () => el.fileInput.click());
+    el.dzBrowse.addEventListener("click", (e) => {
+      e.stopPropagation();
+      el.fileInput.click();
+    });
+    el.fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
+    el.dzRemove.addEventListener("click", (e) => {
+      e.stopPropagation();
+      clearFile();
+      log("staged image cleared");
+    });
+
+    // drag & drop
+    ["dragenter", "dragover"].forEach((evt) =>
+      el.uploadZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        el.uploadZone.classList.add("dragover");
+      })
+    );
+    ["dragleave", "dragend", "drop"].forEach((evt) =>
+      el.uploadZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        if (evt !== "drop" && el.uploadZone.contains(e.relatedTarget)) return;
+        el.uploadZone.classList.remove("dragover");
+      })
+    );
+    el.uploadZone.addEventListener("drop", (e) => {
+      if (e.dataTransfer && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+    });
+
+    // paste image from clipboard (only when image tool is active)
+    document.addEventListener("paste", (e) => {
+      if (active.mode !== "upload" || !e.clipboardData) return;
+      const item = [...e.clipboardData.items].find((i) => /^image\//.test(i.type));
+      if (item) {
+        const file = item.getAsFile();
+        if (file) {
+          handleFiles([file]);
+          toast("⧉ pasted image staged");
+        }
+      }
+    });
+  }
+
+  /* ===================================================================
      COPY BUTTONS
      =================================================================== */
   function bindCopy() {
     document.querySelectorAll(".copy").forEach((btn) => {
+      if (btn.dataset.copyBound) return; // avoid double-binding on re-render
+      btn.dataset.copyBound = "1";
       btn.addEventListener("click", async () => {
         const target = $(btn.dataset.copyTarget);
         if (!target) return;
@@ -539,6 +879,7 @@
   function init() {
     buildRail();
     bindCopy();
+    bindUploadZone();
     selectTool(TOOLS[0].id);
 
     el.input.addEventListener("input", refreshMeta);

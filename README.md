@@ -11,9 +11,16 @@ INJECTION**, and the console resolves downloadable media from:
 | TikTok      | `tiktok.php`        | `url` | `https://www.tiktok.com/@user/video/123` |
 | TikTok V2   | `tiktokv2.php`      | `url` | `https://www.tiktok.com/@user/video/123` |
 | Twitter / X | `twitter.php`       | `q`   | `https://x.com/user/status/123` |
+| Img Host    | upload (multipart)  | file  | drag / browse / paste an image |
 
 ## Features
 
+- **Image host (upload)** — the new **IMG HOST** tool lets you upload an image
+  straight from your device by **drag-and-drop**, file browser, or **paste**
+  (Ctrl/Cmd+V). It shows a live preview + upload progress and returns a public
+  **direct link** you can copy, open, download, or reuse in the other tools.
+  Uploads go to `catbox.moe` with automatic fallback to `tmpfiles.org` and
+  `uguu.se`.
 - **Live request builder** — see the exact `TARGET_URL`, JSON `PAYLOAD_SAMPLE`
   and `PARAMETERS` update as you type, each with a one-tap **COPY** button.
 - **Smart result cards** — the response is deep-scanned for media URLs and
