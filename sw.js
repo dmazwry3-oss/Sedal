@@ -6,7 +6,7 @@
    - NEVER caches API / proxy responses (always live)
    ===================================================================== */
 
-const VERSION = "xemoz-v3";
+const VERSION = "sedal-v1";
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 

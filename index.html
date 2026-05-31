@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="description" content="XEMOZ // MEDIA INJECTION CONSOLE — download media from Instagram, Spotify, TikTok and Twitter/X through a slick cyberpunk API terminal. Installable PWA, deployable to Netlify with a built-in CORS proxy." />
-  <meta name="theme-color" content="#05070d" />
-  <title>XEMOZ // MEDIA INJECTION CONSOLE</title>
+  <meta name="description" content="Sedal Downloader — unduh video & musik dari TikTok (tanpa watermark), Instagram, Spotify, dan Twitter/X. Cepat, gratis, tanpa aplikasi." />
+  <meta name="theme-color" content="#0b0f1a" />
+  <title>Sedal — Downloader TikTok, Instagram, Spotify & Twitter</title>
 
   <!-- Open Graph -->
-  <meta property="og:title" content="XEMOZ // Media Injection Console" />
-  <meta property="og:description" content="A cyberpunk downloader console for Instagram, Spotify, TikTok & Twitter/X." />
+  <meta property="og:title" content="Sedal — Downloader Video & Musik" />
+  <meta property="og:description" content="Unduh video TikTok tanpa watermark, Reels Instagram, lagu Spotify, dan video Twitter/X. Gratis & cepat." />
   <meta property="og:type" content="website" />
 
   <!-- PWA -->
@@ -17,221 +17,181 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="XEMOZ" />
+  <meta name="apple-mobile-web-app-title" content="Sedal" />
   <link rel="apple-touch-icon" href="/assets/icon.svg" />
-  <link rel="mask-icon" href="/assets/icon.svg" color="#00f0ff" />
+  <link rel="mask-icon" href="/assets/icon.svg" color="#7c5cff" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <link rel="icon" href="/assets/icon.svg" type="image/svg+xml" />
 </head>
 <body>
-  <!-- FX overlays -->
-  <div class="fx-scanlines" aria-hidden="true"></div>
-  <div class="fx-vignette" aria-hidden="true"></div>
-  <canvas id="matrix" class="fx-matrix" aria-hidden="true"></canvas>
+  <!-- decorative gradient blobs -->
+  <div class="bg-blobs" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+  </div>
 
   <!-- top progress bar -->
   <div class="progress" id="progress" aria-hidden="true"><span></span></div>
 
-  <div class="shell">
-    <!-- ============ HEADER ============ -->
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-bolt">⚡</span>
-        <div class="brand-text">
-          <h1 class="glitch" data-text="XEMOZ">XEMOZ</h1>
-          <span class="brand-sub">// MEDIA&nbsp;INJECTION&nbsp;CONSOLE</span>
+  <!-- ===================== NAVBAR ===================== -->
+  <header class="nav">
+    <a class="logo" href="/" aria-label="Sedal beranda">
+      <span class="logo-mark">⚡</span>
+      <span class="logo-text">Sedal</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#cara">Cara Pakai</a>
+      <a href="#fitur">Fitur</a>
+      <a href="#faq">FAQ</a>
+      <button class="btn-install" id="btn-install" hidden>⤓ Install App</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ===================== HERO + DOWNLOADER ===================== -->
+    <section class="hero">
+      <div class="hero-inner">
+        <span class="hero-badge">✨ Gratis · Tanpa watermark · Tanpa aplikasi</span>
+        <h1 class="hero-title">
+          Unduh <span class="grad-text">video &amp; musik</span> favoritmu
+          dalam sekejap
+        </h1>
+        <p class="hero-sub">
+          Tempel link dari <b>TikTok</b>, <b>Instagram</b>, <b>Spotify</b>, atau
+          <b>Twitter/X</b> — Sedal langsung menyiapkan tautan unduhannya untukmu.
+        </p>
+
+        <!-- platform tabs -->
+        <div class="tabs" id="tabs" role="tablist" aria-label="Pilih platform"></div>
+
+        <!-- downloader box -->
+        <div class="dl-box" id="dl-box">
+          <div class="dl-input-row">
+            <span class="dl-input-icon" id="dl-input-icon">🔗</span>
+            <input
+              id="link-input"
+              type="text"
+              inputmode="url"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Tempel link di sini…"
+              aria-label="Link media"
+            />
+            <button class="icon-btn" id="btn-paste" title="Tempel dari clipboard" aria-label="Tempel">⧉</button>
+            <button class="icon-btn" id="btn-clear" title="Hapus" aria-label="Hapus" hidden>✕</button>
+          </div>
+          <button class="btn-download" id="btn-download">
+            <span class="btn-download-label">⬇ Download</span>
+          </button>
+        </div>
+
+        <div class="dl-hint">
+          <span id="detect-hint" class="detect-hint">Pilih platform atau tempel link apa pun.</span>
+          <button class="sample-link" id="btn-sample">coba contoh link</button>
         </div>
       </div>
+    </section>
 
-      <div class="status-cluster">
-        <span class="pill" id="clock" title="Local time">--:--:--</span>
-        <span class="pill pill-live" title="Upstream reachability">
-          <i class="dot"></i> NET&nbsp;<span id="net-state">PROBE</span>
-        </span>
-        <!-- route segmented control -->
-        <div class="seg" id="route-seg" role="group" aria-label="Request route">
-          <button class="seg-btn active" data-route="auto"   title="Try proxy, fall back to direct">AUTO</button>
-          <button class="seg-btn"        data-route="proxy"  title="Netlify serverless proxy (no CORS)">PROXY</button>
-          <button class="seg-btn"        data-route="direct" title="Browser → API directly">DIRECT</button>
-        </div>
-        <button class="pill pill-btn" id="btn-install" title="Install app" hidden>⤓ INSTALL</button>
-        <button class="pill pill-btn" id="btn-lite" title="Toggle lite mode (less FX, saves battery)" aria-pressed="false">✦ FX</button>
-        <button class="pill pill-btn" id="btn-help" title="Keyboard shortcuts & help" aria-label="Help">?</button>
+    <!-- ===================== RESULT ===================== -->
+    <section class="result-section" id="result-section" hidden>
+      <div class="result-wrap" id="result-wrap"><!-- card / skeleton / error injected here --></div>
+    </section>
+
+    <!-- ===================== RECENT ===================== -->
+    <section class="recent" id="recent" hidden>
+      <div class="recent-head">
+        <h3>Terakhir diunduh</h3>
+        <button class="text-btn" id="recent-clear">Bersihkan</button>
       </div>
-    </header>
+      <div class="recent-list" id="recent-list"></div>
+    </section>
 
-    <!-- ============ TOOL SELECTOR ============ -->
-    <nav class="tool-rail" id="tool-rail" aria-label="Endpoint selector"></nav>
-
-    <main class="grid">
-      <!-- ============ LEFT COLUMN ============ -->
-      <div class="col">
-        <!-- REQUEST BUILDER -->
-        <section class="panel panel-request">
-          <div class="panel-head">
-            <span class="panel-tag">01</span>
-            <h2>REQUEST&nbsp;BUILDER</h2>
-            <span class="panel-led"></span>
-          </div>
-
-          <div class="panel-body">
-            <div class="tool-headline">
-              <span class="tool-glyph" id="active-glyph">★</span>
-              <div class="tool-headline-text">
-                <div class="tool-name" id="active-name">SELECT TOOL</div>
-                <div class="tool-desc" id="active-desc">Choose an endpoint above to begin.</div>
-              </div>
-            </div>
-
-            <label class="field-label" for="target-input">
-              <span class="prompt">&gt;</span> INPUT&nbsp;TARGET&nbsp;<em id="param-hint">[ q ]</em>
-              <span class="detect-badge" id="detect-badge" hidden></span>
-            </label>
-            <div class="input-wrap">
-              <input
-                id="target-input"
-                type="text"
-                autocomplete="off"
-                spellcheck="false"
-                placeholder="paste a link here…"
-              />
-              <button class="btn-paste" id="btn-paste" title="Paste from clipboard" aria-label="Paste">⧉</button>
-              <button class="btn-clear" id="btn-clear" title="Clear (Esc)" aria-label="Clear input">✕</button>
-            </div>
-
-            <div class="quick-row" id="quick-row"></div>
-
-            <button class="btn-inject" id="btn-inject">
-              <span class="btn-inject-glow"></span>
-              <span class="btn-inject-label">⏻ EXECUTE INJECTION</span>
-            </button>
-
-            <div class="meta-block">
-              <div class="meta-line">
-                <span class="meta-key">[ TARGET_URL ]</span>
-                <button class="copy" data-copy-target="#target-url" title="Copy URL">COPY</button>
-              </div>
-              <code class="meta-val" id="target-url">// build a request…</code>
-            </div>
-
-            <div class="meta-grid">
-              <div class="meta-block">
-                <div class="meta-line">
-                  <span class="meta-key">[ PAYLOAD_SAMPLE ]</span>
-                  <button class="copy" data-copy-target="#payload-sample" title="Copy payload">COPY</button>
-                </div>
-                <pre class="meta-val code" id="payload-sample">{ }</pre>
-              </div>
-
-              <div class="meta-block">
-                <div class="meta-line"><span class="meta-key">[ PARAMETERS ]</span></div>
-                <code class="meta-val" id="params-key">.q</code>
-                <code class="meta-val dim" id="params-val">—</code>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- HISTORY -->
-        <section class="panel panel-history">
-          <div class="panel-head">
-            <span class="panel-tag">03</span>
-            <h2>HISTORY</h2>
-            <div class="head-actions">
-              <span class="status-chip" id="history-count">0</span>
-              <button class="copy danger" id="history-clear" title="Clear history">CLEAR</button>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div class="history-list" id="history-list">
-              <div class="history-empty">// no requests yet — your injections will be logged here.</div>
-            </div>
-          </div>
-        </section>
+    <!-- ===================== HOW TO ===================== -->
+    <section class="section" id="cara">
+      <h2 class="section-title">Cara pakai — 3 langkah mudah</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-ic">📋</div>
+          <h3>Salin link</h3>
+          <p>Buka TikTok / Instagram / Spotify / X, lalu salin tautan video atau lagu yang ingin diunduh.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-ic">📥</div>
+          <h3>Tempel di Sedal</h3>
+          <p>Tempel link ke kotak di atas. Platform terdeteksi otomatis, tinggal tekan <b>Download</b>.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-ic">⬇️</div>
+          <h3>Simpan</h3>
+          <p>Pilih kualitas yang diinginkan dan simpan video / audio / gambar ke perangkatmu.</p>
+        </div>
       </div>
+    </section>
 
-      <!-- ============ RIGHT: RESPONSE ============ -->
-      <section class="panel panel-response">
-        <div class="panel-head">
-          <span class="panel-tag">02</span>
-          <h2>RESPONSE&nbsp;STREAM</h2>
-          <div class="head-actions">
-            <span class="status-chip route" id="route-used" title="Route used">—</span>
-            <span class="status-chip" id="resp-time" hidden>0ms</span>
-            <span class="status-chip" id="resp-status">IDLE</span>
-            <button class="copy" data-copy-target="#response-json" id="btn-copy-json" title="Copy JSON">COPY_JSON</button>
-          </div>
-        </div>
+    <!-- ===================== FEATURES ===================== -->
+    <section class="section" id="fitur">
+      <h2 class="section-title">Kenapa pakai Sedal?</h2>
+      <div class="features">
+        <div class="feature"><div class="feature-ic">🚀</div><h3>Cepat</h3><p>Proses instan, tanpa antre dan tanpa iklan mengganggu.</p></div>
+        <div class="feature"><div class="feature-ic">🆓</div><h3>Gratis</h3><p>Tidak ada biaya, tidak perlu daftar atau login.</p></div>
+        <div class="feature"><div class="feature-ic">💧</div><h3>Tanpa watermark</h3><p>Video TikTok bersih tanpa logo, siap dibagikan ulang.</p></div>
+        <div class="feature"><div class="feature-ic">📱</div><h3>Semua perangkat</h3><p>Jalan mulus di HP, tablet, dan desktop. Bisa diinstal seperti aplikasi.</p></div>
+        <div class="feature"><div class="feature-ic">🔒</div><h3>Privat</h3><p>Kami tidak menyimpan media kamu. Riwayat hanya tersimpan di perangkatmu.</p></div>
+        <div class="feature"><div class="feature-ic">🎵</div><h3>Video &amp; musik</h3><p>Unduh video, audio, maupun gambar dari satu tempat.</p></div>
+      </div>
+    </section>
 
-        <div class="panel-body">
-          <!-- Rendered media results -->
-          <div class="results" id="results" hidden></div>
+    <!-- ===================== FAQ ===================== -->
+    <section class="section" id="faq">
+      <h2 class="section-title">Pertanyaan umum</h2>
+      <div class="faq" id="faq-list">
+        <details class="faq-item">
+          <summary>Apakah Sedal gratis?</summary>
+          <p>Ya, sepenuhnya gratis. Kamu tidak perlu membuat akun atau membayar apa pun.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Apakah video TikTok benar-benar tanpa watermark?</summary>
+          <p>Ya, untuk TikTok kami mengambil versi tanpa watermark bila tersedia. Jika tidak, gunakan opsi <b>TikTok V2</b> sebagai cadangan.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Platform apa saja yang didukung?</summary>
+          <p>Saat ini: TikTok, Instagram (foto/Reels/carousel), Spotify (lagu), dan Twitter/X (video &amp; gambar).</p>
+        </details>
+        <details class="faq-item">
+          <summary>Kenapa kadang gagal atau kosong?</summary>
+          <p>Pastikan tautannya benar dan kontennya publik (bukan privat). Untuk TikTok, coba tombol <b>TikTok V2</b>. Server sumber juga kadang sibuk — coba lagi beberapa saat.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Apakah aman dan legal?</summary>
+          <p>Sedal hanya membantu mengambil tautan media. Unduh hanya konten yang kamu miliki haknya atau yang diizinkan. Hormati hak cipta pembuat konten.</p>
+        </details>
+      </div>
+    </section>
+  </main>
 
-          <!-- Raw JSON -->
-          <div class="json-head">
-            <span class="json-label">// RAW_OUTPUT</span>
-            <button class="json-toggle" id="json-toggle">HIDE</button>
-          </div>
-          <pre class="response" id="response-json"><span class="awaiting">// AWAITING INJECTION...</span></pre>
-        </div>
-      </section>
-    </main>
-
-    <!-- ============ FOOTER / LOG ============ -->
-    <footer class="footer">
-      <div class="log" id="log"><span class="log-line">[sys] console ready. awaiting operator input.</span></div>
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="logo-mark">⚡</span> <b>Sedal</b>
+        <p>Downloader video &amp; musik untuk TikTok, Instagram, Spotify, dan Twitter/X.</p>
+      </div>
       <div class="footer-note">
-        built for <strong>operator</strong> · endpoints routed through
-        <code>api-xemoz-official.my.id</code> · deploy-ready for
-        <strong>Netlify</strong> · use responsibly
-      </div>
-    </footer>
-  </div>
-
-  <!-- ============ HELP MODAL ============ -->
-  <div class="modal" id="help" hidden>
-    <div class="modal-card">
-      <div class="modal-head">
-        <h3>⌘ CONSOLE&nbsp;MANUAL</h3>
-        <button class="modal-close" id="help-close" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <h4>SHORTCUTS</h4>
-        <ul class="kbd-list">
-          <li><kbd>Enter</kbd> execute injection</li>
-          <li><kbd>Ctrl</kbd>+<kbd>K</kbd> focus the input</li>
-          <li><kbd>Esc</kbd> clear input / close this panel</li>
-          <li><kbd>1</kbd>–<kbd>5</kbd> switch endpoint</li>
-        </ul>
-        <h4>ROUTING</h4>
-        <p><b>AUTO</b> — try the Netlify proxy first, fall back to a direct browser call.</p>
-        <p><b>PROXY</b> — always use the serverless function (<code>/api/proxy</code>). No CORS issues. Requires Netlify deploy.</p>
-        <p><b>DIRECT</b> — call the API straight from your browser. Fast, but may be blocked by CORS.</p>
-        <h4>DEPLOY</h4>
-        <p>Push to GitHub → import the repo on <b>Netlify</b>. The included
-           <code>netlify.toml</code> + <code>netlify/functions/proxy.js</code>
-           wire everything up automatically — no build step.</p>
-        <h4>MOBILE</h4>
-        <p>Tap <b>⤓ INSTALL</b> (or your browser's "Add to Home Screen") to run
-           XEMOZ fullscreen like a native app — it even works offline.</p>
-        <p>Once installed you can <b>share a link straight from Instagram / TikTok /
-           X</b> into XEMOZ via the system share sheet.</p>
-        <p>Tap <b>✦ FX</b> to toggle lite mode (disables the matrix rain) to save
-           battery on older phones.</p>
+        Gunakan dengan bertanggung jawab — hanya unduh konten yang kamu miliki haknya.
+        Sedal tidak berafiliasi dengan TikTok, Instagram, Spotify, atau X.
       </div>
     </div>
-  </div>
+  </footer>
 
-  <!-- Mobile floating action button -->
-  <button class="fab" id="fab-inject" title="Execute injection" aria-label="Execute injection">
-    <span class="fab-icon">⏻</span>
-  </button>
-
-  <!-- Toast -->
+  <!-- toast -->
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="js/app.js" defer></script>

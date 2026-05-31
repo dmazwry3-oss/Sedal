@@ -1,95 +1,70 @@
-# XEMOZ // MEDIA INJECTION CONSOLE ⚡
+# Sedal — Downloader Video & Musik ⚡
 
-A slick, cyberpunk-terminal styled web console for the
-`api-xemoz-official.my.id` downloader API. Paste a link, hit **EXECUTE
-INJECTION**, and the console resolves downloadable media from:
+A clean, friendly web app to download media from **TikTok** (no watermark),
+**Instagram**, **Spotify**, and **Twitter/X**. Paste a link, hit **Download**,
+and pick the file you want. Installable as a PWA and deploy-ready for Netlify.
 
-| Tool        | Endpoint            | Param | Example input |
-|-------------|---------------------|-------|---------------|
+| Platform    | Endpoint            | Param | Example link |
+|-------------|---------------------|-------|--------------|
+| TikTok      | `tiktok.php`        | `url` | `https://www.tiktok.com/@user/video/123` |
+| TikTok V2   | `tiktokv2.php`      | `url` | *(fallback for TikTok)* |
 | Instagram   | `instagram.php`     | `q`   | `https://www.instagram.com/p/XYZ/` |
 | Spotify     | `spotify-dl.php`    | `q`   | `https://open.spotify.com/track/...` |
-| TikTok      | `tiktok.php`        | `url` | `https://www.tiktok.com/@user/video/123` |
-| TikTok V2   | `tiktokv2.php`      | `url` | `https://www.tiktok.com/@user/video/123` |
 | Twitter / X | `twitter.php`       | `q`   | `https://x.com/user/status/123` |
 
 ## ✨ Features
 
-- **📱 Installable PWA** — add it to your home screen and run it fullscreen like
-  a native app. Works **offline** (the app shell is cached by a service worker).
-- **🔗 Share Target** — once installed on mobile, share an Instagram / TikTok / X
-  link straight from those apps into XEMOZ via the system share sheet; it
-  auto-fills, auto-detects the service and runs.
-- **Smart auto-detect** — paste any link and the matching endpoint is selected
-  automatically.
-- **AUTO / PROXY / DIRECT routing** — choose how requests are sent:
-  - **AUTO** *(default)* — try the Netlify proxy first, fall back to a direct call.
-  - **PROXY** — always use the serverless function (no CORS issues).
-  - **DIRECT** — call the API straight from the browser.
-- **Live request builder** — `TARGET_URL`, JSON `PAYLOAD_SAMPLE` and
-  `PARAMETERS` update as you type, each with a one-tap **COPY** button.
-- **Rich result cards** — the response is deep-scanned for media URLs and
-  rendered as inline **video / audio previews**, an **image gallery**, plus
-  categorized ⬇ download buttons, per-asset **copy link**, and **download all**.
-- **History** — your last requests are saved (localStorage); click to re-run.
-- **Syntax-highlighted RAW_OUTPUT** with clickable URLs.
-- **Keyboard shortcuts** — `Enter` run · `Ctrl/⌘+K` focus · `Esc` clear ·
-  `1–5` switch endpoint.
-- **Mobile-first** — thumb-reachable floating action button, big touch targets,
-  safe-area insets for notched phones, no iOS focus-zoom, haptic feedback, and a
-  **lite mode** (✦ FX) that disables the matrix rain to save battery.
-- **Terminal FX** — glitch title, scanlines, matrix rain, live clock, network
-  probe, activity log, top progress bar, toasts.
-- Fully **responsive** and respects `prefers-reduced-motion`.
+- **Paste & download** — auto-detects the platform from the link you paste.
+- **Rich preview** — inline video/audio player, thumbnail, image gallery, and
+  clearly labeled download buttons (video / audio / image / download all).
+- **No CORS headaches** — requests go through a Netlify serverless proxy first,
+  with an automatic fallback to a direct browser call.
+- **Recent downloads** — your last links are saved locally for quick re-runs.
+- **Installable PWA** — add to home screen, works offline, and supports the
+  Web **Share Target** (share a link from TikTok/IG/X straight into Sedal).
+- **Mobile-first & responsive** — big touch targets, safe-area insets, haptics,
+  no iOS focus-zoom.
+- Friendly **how-to**, **features**, and **FAQ** sections.
 
-## 🚀 Deploy to Netlify
+## 🚀 Deploy to Netlify (recommended)
 
-This repo is Netlify-ready — **no build step**. The included
-[`netlify.toml`](./netlify.toml) and the serverless proxy at
-[`netlify/functions/proxy.js`](./netlify/functions/proxy.js) wire everything up.
+No build step. The included [`netlify.toml`](./netlify.toml) and the proxy at
+[`netlify/functions/proxy.js`](./netlify/functions/proxy.js) wire it up.
 
-### Option A — Git import (recommended)
-1. Push this repo to GitHub (already done if you're reading the PR).
+1. Push to GitHub.
 2. On [Netlify](https://app.netlify.com) → **Add new site → Import an existing
-   project** → pick this repo.
-3. Leave build command empty, publish directory `.` (already set in
-   `netlify.toml`). Click **Deploy**.
+   project** → choose this repo → **Deploy** (leave build command empty,
+   publish dir `.`).
 
-### Option B — Netlify CLI
+Or via CLI:
 ```bash
 npm i -g netlify-cli
-netlify deploy --prod
+netlify deploy --prod     # or: netlify dev  (local site + functions)
 ```
 
-### Option C — Local dev with functions
-```bash
-npm i -g netlify-cli
-netlify dev          # serves the site + functions at http://localhost:8888
-```
-
-> The serverless proxy lives at `/.netlify/functions/proxy` (aliased to
-> `/api/proxy`). It whitelists the five services, calls the upstream API
-> server-side, and returns JSON with CORS headers — so the browser never hits a
-> CORS wall.
+The proxy lives at `/.netlify/functions/proxy` (aliased `/api/proxy`): it
+whitelists the five services, calls the upstream API server-side, and returns
+JSON with CORS headers — so the browser never hits a CORS wall.
 
 ## 🧪 Run as a plain static site
 
-No Netlify? It still works (use **DIRECT** route):
 ```bash
 python3 -m http.server 8080   # open http://localhost:8080
 ```
-> In DIRECT mode the browser calls the API itself; if the API doesn't send
-> `Access-Control-Allow-Origin`, switch to a Netlify deploy (PROXY/AUTO).
+Without Netlify the app falls back to calling the API directly from the browser;
+if the API doesn't send `Access-Control-Allow-Origin`, deploy to Netlify so the
+proxy can handle it.
 
 ## 📁 Project structure
 
 ```
 .
-├── index.html               # console layout
-├── css/style.css            # cyberpunk theme + mobile/PWA styles
-├── js/app.js                # routing, auto-detect, history, PWA, rendering
+├── index.html               # landing page + downloader UI
+├── css/style.css            # modern theme (glass cards, responsive)
+├── js/app.js                # tabs, auto-detect, fetch+render, recent, PWA
 ├── manifest.webmanifest     # PWA manifest (installable + share target)
 ├── sw.js                    # service worker (offline shell cache)
-├── assets/icon.svg          # app icon (any + maskable)
+├── assets/icon.svg          # app icon
 ├── netlify.toml             # Netlify config + redirects + headers
 ├── netlify/functions/
 │   └── proxy.js             # serverless CORS proxy (whitelisted services)
@@ -98,5 +73,5 @@ python3 -m http.server 8080   # open http://localhost:8080
 
 ---
 
-Built for the operator. Use responsibly — only download content you have the
-rights to.
+Use responsibly — only download content you have the rights to. Sedal is not
+affiliated with TikTok, Instagram, Spotify, or X.

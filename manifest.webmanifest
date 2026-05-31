@@ -1,8 +1,8 @@
 {
-  "name": "XEMOZ // Media Injection Console",
-  "short_name": "XEMOZ",
-  "description": "Cyberpunk downloader console for Instagram, Spotify, TikTok and Twitter/X.",
-  "lang": "en",
+  "name": "Sedal — Downloader Video & Musik",
+  "short_name": "Sedal",
+  "description": "Unduh video TikTok tanpa watermark, Reels Instagram, lagu Spotify, dan video Twitter/X. Gratis & cepat.",
+  "lang": "id",
   "dir": "ltr",
   "start_url": "/?source=pwa",
   "scope": "/",
@@ -10,8 +10,8 @@
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#05070d",
-  "theme_color": "#05070d",
+  "background_color": "#0b0f1a",
+  "theme_color": "#0b0f1a",
   "categories": ["utilities", "productivity", "entertainment"],
   "icons": [
     {
@@ -28,30 +28,14 @@
     }
   ],
   "shortcuts": [
-    {
-      "name": "Instagram downloader",
-      "short_name": "Instagram",
-      "url": "/?tool=instagram&source=shortcut"
-    },
-    {
-      "name": "TikTok downloader",
-      "short_name": "TikTok",
-      "url": "/?tool=tiktok&source=shortcut"
-    },
-    {
-      "name": "Spotify downloader",
-      "short_name": "Spotify",
-      "url": "/?tool=spotify&source=shortcut"
-    }
+    { "name": "TikTok", "short_name": "TikTok", "url": "/?tool=tiktok&source=shortcut" },
+    { "name": "Instagram", "short_name": "Instagram", "url": "/?tool=instagram&source=shortcut" },
+    { "name": "Spotify", "short_name": "Spotify", "url": "/?tool=spotify&source=shortcut" }
   ],
   "share_target": {
     "action": "/",
     "method": "GET",
     "enctype": "application/x-www-form-urlencoded",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
+    "params": { "title": "title", "text": "text", "url": "url" }
   }
 }
