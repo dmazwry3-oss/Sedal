@@ -215,11 +215,11 @@
     (active.extras || []).forEach((ex) => (extraValues[ex.key] = ex.default));
     buildOptions();
 
-    // image tools get the URL/Upload mode toggle; downloaders are URL-only
+    // image tools get the URL/Upload mode toggle and default to Upload (easier);
+    // downloaders are URL-only.
     const isImage = active.category === "image";
     el.modeToggle.hidden = !isImage;
-    if (!isImage && inputMode === "upload") setMode("url");
-    else applyMode(); // refresh which box is visible
+    setMode(isImage ? "upload" : "url");
 
     if (!keepInputValue) setHint(active.tip);
   }
@@ -238,6 +238,8 @@
     el.modeUpload.classList.toggle("active", inputMode === "upload");
     el.box.hidden = uploadVisible;          // URL box
     el.uploadZone.hidden = !uploadVisible;  // upload zone
+    // "coba contoh link" only makes sense for the URL box
+    if (el.sample) el.sample.hidden = uploadVisible;
   }
 
   /* extra-parameter controls (scale / mode / level) */
