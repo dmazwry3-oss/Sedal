@@ -1,27 +1,45 @@
-# Sedal — Downloader Video & Musik ⚡
+# Sedal — Downloader Video, Musik & Alat Gambar ⚡
 
 A clean, friendly web app to download media from **TikTok** (no watermark),
-**Instagram**, **Spotify**, and **Twitter/X**. Paste a link, hit **Download**,
-and pick the file you want. Installable as a PWA and deploy-ready for Netlify.
+**Instagram**, **Spotify**, **Twitter/X**, and **YouTube** (MP3/MP4), plus a set
+of **image tools** (HD upscale, enhance, remove background, pixel-art). Paste a
+link, hit the button, and pick your result. Installable as a PWA and
+deploy-ready for Netlify.
 
+### Downloaders
 | Platform    | Endpoint            | Param | Example link |
 |-------------|---------------------|-------|--------------|
-| TikTok      | `tiktok.php`        | `url` | `https://www.tiktok.com/@user/video/123` |
-| TikTok V2   | `tiktokv2.php`      | `url` | *(fallback for TikTok)* |
-| Instagram   | `instagram.php`     | `q`   | `https://www.instagram.com/p/XYZ/` |
-| Spotify     | `spotify-dl.php`    | `q`   | `https://open.spotify.com/track/...` |
-| Twitter / X | `twitter.php`       | `q`   | `https://x.com/user/status/123` |
+| TikTok      | `donwloader/tiktok.php`     | `url` | `https://www.tiktok.com/@user/video/123` |
+| TikTok V2   | `donwloader/tiktokv2.php`   | `url` | *(fallback for TikTok)* |
+| Instagram   | `donwloader/instagram.php`  | `q`   | `https://www.instagram.com/p/XYZ/` |
+| Spotify     | `donwloader/spotify-dl.php` | `q`   | `https://open.spotify.com/track/...` |
+| Twitter / X | `donwloader/twitter.php`    | `q`   | `https://x.com/user/status/123` |
+| YouTube MP4 | `donwloader/ytmp4.php`      | `url` | `https://www.youtube.com/watch?v=...` |
+| YouTube MP3 | `donwloader/ytmp3.php`      | `url` | `https://www.youtube.com/watch?v=...` |
+
+### Image tools
+| Tool        | Endpoint                    | Params        |
+|-------------|-----------------------------|---------------|
+| HD Upscale  | `tools/image/hdimage.php`   | `url`, `scale` (2/4/8) |
+| Remini      | `tools/image/remini.php`    | `url` |
+| Remove BG   | `tools/image/removebg.php`  | `url` |
+| Wink        | `tools/image/wink.php`      | `url`, `mode` (ultrahd/…) |
+| ToPixel     | `tools/image/topixel.php`   | `url`, `level` (10–50) |
 
 ## ✨ Features
 
-- **Paste & download** — auto-detects the platform from the link you paste.
-- **Rich preview** — inline video/audio player, thumbnail, image gallery, and
-  clearly labeled download buttons (video / audio / image / download all).
-- **No CORS headaches** — requests go through a Netlify serverless proxy first,
-  with an automatic fallback to a direct browser call.
-- **Recent downloads** — your last links are saved locally for quick re-runs.
+- **Paste & go** — tabs grouped into *Unduh Media* and *Alat Gambar*;
+  downloader links auto-detect the platform.
+- **Extra options** — per-tool selectors (scale / mode / level) for the image
+  tools, forwarded safely through the proxy.
+- **Rich preview** — inline video/audio player, thumbnail, image gallery, a
+  before/after compare view for image tools, and labeled download buttons.
+- **No CORS headaches** — requests go through a Netlify serverless proxy first
+  (which also returns processed images as data URLs), with an automatic
+  fallback to a direct browser call.
+- **Recent items** — your last actions are saved locally for quick re-runs.
 - **Installable PWA** — add to home screen, works offline, and supports the
-  Web **Share Target** (share a link from TikTok/IG/X straight into Sedal).
+  Web **Share Target** (share a link from another app straight into Sedal).
 - **Mobile-first & responsive** — big touch targets, safe-area insets, haptics,
   no iOS focus-zoom.
 - Friendly **how-to**, **features**, and **FAQ** sections.

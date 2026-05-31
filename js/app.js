@@ -1,29 +1,33 @@
 /* =====================================================================
-   SEDAL — Media Downloader  ·  app.js
-   Friendly downloader UI on top of the api-xemoz endpoints.
+   SEDAL — Media Downloader & Image Tools  ·  app.js
+   Friendly UI on top of the api-xemoz endpoints.
    Routes through the Netlify proxy (no CORS), falls back to direct.
    ===================================================================== */
 (() => {
   "use strict";
 
-  const API_BASE = "https://api-xemoz-official.my.id/api/donwloader/";
+  const API_ROOT = "https://api-xemoz-official.my.id/api/";
   const PROXY_URL = "/.netlify/functions/proxy";
   const RECENT_KEY = "sedal_recent_v1";
   const MAX_RECENT = 6;
 
-  /* ---------- brand icons (inline SVG) ---------- */
+  /* ---------- icons (inline SVG or emoji) ---------- */
   const ICONS = {
     tiktok: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 3c.3 2 1.6 3.6 3.5 3.9V9.6c-1.3 0-2.5-.4-3.5-1v5.7a5.3 5.3 0 1 1-5.3-5.3c.3 0 .6 0 .9.1v2.8a2.6 2.6 0 1 0 1.8 2.4V3h2.6z"/></svg>',
     instagram: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.6"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/></svg>',
     spotify: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><path d="M7.4 9.8c3-.9 6.4-.5 8.9 1.1M7.9 13c2.4-.7 4.8-.4 6.8 1M8.5 15.9c1.8-.5 3.6-.3 5 .6"/></svg>',
     tiktokv2: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 3c.3 2 1.6 3.6 3.5 3.9V9.6c-1.3 0-2.5-.4-3.5-1v5.7a5.3 5.3 0 1 1-5.3-5.3c.3 0 .6 0 .9.1v2.8a2.6 2.6 0 1 0 1.8 2.4V3h2.6z"/></svg>',
     twitter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>',
+    youtube: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2a2.7 2.7 0 0 0-1.9-1.9C18 4.8 12 4.8 12 4.8s-6 0-7.7.5A2.7 2.7 0 0 0 2.4 7.2 28 28 0 0 0 2 12a28 28 0 0 0 .4 4.8 2.7 2.7 0 0 0 1.9 1.9c1.7.5 7.7.5 7.7.5s6 0 7.7-.5a2.7 2.7 0 0 0 1.9-1.9A28 28 0 0 0 22 12a28 28 0 0 0-.4-4.8zM10 15V9l5 3z"/></svg>',
+    hdimage: "🔍", remini: "✨", removebg: "✂️", wink: "🪄", topixel: "🧩",
   };
 
   /* ---------- tool registry ---------- */
   const TOOLS = [
+    // ===== DOWNLOADERS =====
     {
-      id: "tiktok", name: "TikTok", endpoint: "tiktok.php", param: "url",
+      id: "tiktok", name: "TikTok", category: "download", family: "tiktok",
+      path: "donwloader/tiktok.php", param: "url",
       accent: "#fe2c55", badge: "linear-gradient(135deg,#25f4ee,#fe2c55)",
       placeholder: "https://www.tiktok.com/@user/video/...",
       sample: "https://www.tiktok.com/@tiktok/video/7106594312292453675",
@@ -31,7 +35,8 @@
       tip: "Video TikTok tanpa watermark + audionya.",
     },
     {
-      id: "instagram", name: "Instagram", endpoint: "instagram.php", param: "q",
+      id: "instagram", name: "Instagram", category: "download",
+      path: "donwloader/instagram.php", param: "q",
       accent: "#e1306c", badge: "linear-gradient(135deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)",
       placeholder: "https://www.instagram.com/p/...",
       sample: "https://www.instagram.com/reel/C5qWNkWreXf/",
@@ -39,7 +44,8 @@
       tip: "Foto, Reels, dan carousel Instagram.",
     },
     {
-      id: "spotify", name: "Spotify", endpoint: "spotify-dl.php", param: "q",
+      id: "spotify", name: "Spotify", category: "download",
+      path: "donwloader/spotify-dl.php", param: "q",
       accent: "#1db954", badge: "#1db954",
       placeholder: "https://open.spotify.com/track/...",
       sample: "https://open.spotify.com/track/3rXS2AEXNADrIFyuY3F6RJ",
@@ -47,7 +53,8 @@
       tip: "Unduh lagu Spotify beserta sampul albumnya.",
     },
     {
-      id: "twitter", name: "Twitter / X", endpoint: "twitter.php", param: "q",
+      id: "twitter", name: "Twitter / X", category: "download",
+      path: "donwloader/twitter.php", param: "q",
       accent: "#1d9bf0", badge: "#1d9bf0",
       placeholder: "https://x.com/user/status/...",
       sample: "https://x.com/Twitter/status/1445078208190291973",
@@ -55,21 +62,96 @@
       tip: "Video & gambar dari Tweet / status X.",
     },
     {
-      id: "tiktokv2", name: "TikTok V2", endpoint: "tiktokv2.php", param: "url",
+      id: "ytmp4", name: "YouTube MP4", category: "download", family: "youtube",
+      path: "donwloader/ytmp4.php", param: "url",
+      accent: "#ff0000", badge: "linear-gradient(135deg,#ff0000,#c4302b)",
+      placeholder: "https://www.youtube.com/watch?v=...",
+      sample: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      detect: /youtube\.com|youtu\.be/i,
+      tip: "Unduh video YouTube dalam format MP4.",
+    },
+    {
+      id: "ytmp3", name: "YouTube MP3", category: "download", family: "youtube",
+      path: "donwloader/ytmp3.php", param: "url",
+      accent: "#ff5252", badge: "linear-gradient(135deg,#ff5252,#ff0000)",
+      placeholder: "https://www.youtube.com/watch?v=...",
+      sample: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      detect: null, // shares the youtube family; choose manually
+      tip: "Ubah video YouTube menjadi audio MP3.",
+    },
+    {
+      id: "tiktokv2", name: "TikTok V2", category: "download", family: "tiktok",
+      path: "donwloader/tiktokv2.php", param: "url",
       accent: "#00c2cc", badge: "linear-gradient(135deg,#fe2c55,#25f4ee)",
       placeholder: "https://www.tiktok.com/@user/video/...",
       sample: "https://www.tiktok.com/@tiktok/video/7106594312292453675",
       detect: null, // manual fallback only
       tip: "Cadangan untuk TikTok bila yang utama gagal.",
     },
+
+    // ===== IMAGE TOOLS =====
+    {
+      id: "hdimage", name: "HD Upscale", category: "image",
+      path: "tools/image/hdimage.php", param: "url",
+      accent: "#7c5cff", badge: "linear-gradient(135deg,#7c5cff,#a98bff)",
+      placeholder: "Tempel URL gambar (jpg/png)…",
+      sample: "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d",
+      detect: null,
+      tip: "Perbesar resolusi gambar beberapa kali lipat.",
+      extras: [{ key: "scale", label: "Skala", options: ["2", "4", "8"], default: "4" }],
+    },
+    {
+      id: "remini", name: "Remini", category: "image",
+      path: "tools/image/remini.php", param: "url",
+      accent: "#00c2cc", badge: "linear-gradient(135deg,#00c2cc,#36e0d0)",
+      placeholder: "Tempel URL gambar (jpg/png)…",
+      sample: "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d",
+      detect: null,
+      tip: "Pertajam & perjelas foto buram (face enhance).",
+    },
+    {
+      id: "removebg", name: "Hapus BG", category: "image",
+      path: "tools/image/removebg.php", param: "url",
+      accent: "#ff5c9d", badge: "linear-gradient(135deg,#ff5c9d,#ff8fb3)",
+      placeholder: "Tempel URL gambar (jpg/png)…",
+      sample: "https://cloud.yardansh.com/M3bLEV.jpg",
+      detect: null,
+      tip: "Hapus latar belakang gambar jadi transparan.",
+    },
+    {
+      id: "wink", name: "Wink", category: "image",
+      path: "tools/image/wink.php", param: "url",
+      accent: "#ffb454", badge: "linear-gradient(135deg,#ffb454,#ffd08a)",
+      placeholder: "Tempel URL gambar (jpg/png)…",
+      sample: "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d",
+      detect: null,
+      tip: "Tingkatkan kualitas gambar dengan mode pilihan.",
+      extras: [{ key: "mode", label: "Mode", options: ["ultrahd", "enhance", "colorize"], default: "ultrahd" }],
+    },
+    {
+      id: "topixel", name: "ToPixel", category: "image",
+      path: "tools/image/topixel.php", param: "url",
+      accent: "#2bd576", badge: "linear-gradient(135deg,#2bd576,#5cf0a0)",
+      placeholder: "Tempel URL gambar (jpg/png)…",
+      sample: "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d",
+      detect: null,
+      tip: "Ubah gambar menjadi gaya pixel-art.",
+      extras: [{ key: "level", label: "Level", options: ["10", "20", "30", "50"], default: "30" }],
+    },
+  ];
+
+  const CATEGORIES = [
+    { id: "download", label: "Unduh Media" },
+    { id: "image", label: "Alat Gambar" },
   ];
 
   const $ = (s) => document.querySelector(s);
   const el = {
     tabs: $("#tabs"),
+    options: $("#tool-options"),
     input: $("#link-input"), inputIcon: $("#dl-input-icon"),
     paste: $("#btn-paste"), clear: $("#btn-clear"),
-    download: $("#btn-download"), box: $("#dl-box"),
+    download: $("#btn-download"), dlLabel: $(".btn-download-label"), box: $("#dl-box"),
     detectHint: $("#detect-hint"), sample: $("#btn-sample"),
     progress: $("#progress"),
     resultSection: $("#result-section"), resultWrap: $("#result-wrap"),
@@ -81,45 +163,93 @@
   let active = TOOLS[0];
   let busy = false;
   let deferredPrompt = null;
+  let extraValues = {};   // current values of the active tool's extra params
 
   /* ===================================================================
-     TABS
+     TABS (grouped by category)
      =================================================================== */
   function buildTabs() {
     el.tabs.innerHTML = "";
-    TOOLS.forEach((t) => {
-      const b = document.createElement("button");
-      b.className = "tab";
-      b.dataset.id = t.id;
-      b.style.setProperty("--tab", t.accent);
-      b.setAttribute("role", "tab");
-      b.innerHTML = `<span class="tab-ic" style="background:${t.badge}">${ICONS[t.id]}</span><span>${t.name}</span>`;
-      b.addEventListener("click", () => selectTool(t.id));
-      el.tabs.appendChild(b);
+    CATEGORIES.forEach((cat) => {
+      const group = document.createElement("div");
+      group.className = "tab-group";
+      group.innerHTML = `<span class="tab-group-label">${cat.label}</span>`;
+      const row = document.createElement("div");
+      row.className = "tab-row";
+      TOOLS.filter((t) => t.category === cat.id).forEach((t) => {
+        const b = document.createElement("button");
+        b.className = "tab";
+        b.dataset.id = t.id;
+        b.style.setProperty("--tab", t.accent);
+        b.setAttribute("role", "tab");
+        b.innerHTML = `<span class="tab-ic" style="background:${t.badge}">${ICONS[t.id]}</span><span>${t.name}</span>`;
+        b.addEventListener("click", () => selectTool(t.id));
+        row.appendChild(b);
+      });
+      group.appendChild(row);
+      el.tabs.appendChild(group);
     });
   }
 
-  function selectTool(id, keepHint) {
+  function selectTool(id, keepInputValue) {
     active = TOOLS.find((t) => t.id === id) || TOOLS[0];
     document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.id === active.id));
     document.documentElement.style.setProperty("--accent", active.accent);
     el.input.placeholder = active.placeholder;
-    if (!keepHint) setHint(active.tip);
+    el.inputIcon.textContent = active.category === "image" ? "🖼️" : "🔗";
+    el.dlLabel.textContent = active.category === "image" ? "✨ Proses" : "⬇ Download";
+
+    // reset extra params to defaults + (re)build their controls
+    extraValues = {};
+    (active.extras || []).forEach((ex) => (extraValues[ex.key] = ex.default));
+    buildOptions();
+
+    if (!keepInputValue) setHint(active.tip);
+  }
+
+  /* extra-parameter controls (scale / mode / level) */
+  function buildOptions() {
+    el.options.innerHTML = "";
+    const extras = active.extras || [];
+    el.options.hidden = extras.length === 0;
+    extras.forEach((ex) => {
+      const wrap = document.createElement("label");
+      wrap.className = "opt";
+      const sel = `<select data-key="${ex.key}">${ex.options
+        .map((o) => `<option value="${attr(o)}"${o === ex.default ? " selected" : ""}>${escapeHtml(o)}</option>`)
+        .join("")}</select>`;
+      wrap.innerHTML = `<span class="opt-label">${escapeHtml(ex.label)}</span>${sel}`;
+      const select = wrap.querySelector("select");
+      select.addEventListener("change", () => { extraValues[ex.key] = select.value; });
+      el.options.appendChild(wrap);
+    });
   }
 
   /* ===================================================================
-     AUTO-DETECT
+     AUTO-DETECT (family-aware so MP3/MP4 & TikTok V2 don't fight)
      =================================================================== */
   function autoDetect() {
     const v = el.input.value.trim();
     el.clear.hidden = !v;
     if (!v) { setHint(active.tip); return; }
+    if (active.category === "image") {
+      // image tools take a generic image URL — no platform detection
+      setHint(active.tip);
+      return;
+    }
     const match = TOOLS.find((t) => t.detect && t.detect.test(v));
     if (match) {
-      if (match.id !== active.id) selectTool(match.id, true);
-      setHint(`✓ Terdeteksi: ${match.name}`, "ok");
+      // stay within the same family if the user already picked a variant
+      if (match.family && match.family === active.family) {
+        if (match.family === "youtube") setHint("✓ YouTube terdeteksi — pilih MP3 atau MP4 di atas.", "ok");
+        else setHint(`✓ Terdeteksi: ${active.name}`, "ok");
+      } else {
+        selectTool(match.id, true);
+        if (match.family === "youtube") setHint("✓ YouTube terdeteksi — pilih MP3 atau MP4 di atas.", "ok");
+        else setHint(`✓ Terdeteksi: ${match.name}`, "ok");
+      }
     } else if (/^https?:\/\//i.test(v)) {
-      setHint("Link tidak dikenali — pilih platform manual di atas.", "warn");
+      setHint("Link tidak dikenali — pilih tool manual di atas.", "warn");
     } else {
       setHint(active.tip);
     }
@@ -132,11 +262,26 @@
   /* ===================================================================
      ROUTING (proxy first, then direct)
      =================================================================== */
+  function buildExtras() {
+    const params = new URLSearchParams();
+    (active.extras || []).forEach((ex) => {
+      const val = extraValues[ex.key];
+      if (val != null && val !== "") params.set(ex.key, val);
+    });
+    return params;
+  }
   function directUrl(value) {
-    return `${API_BASE}${active.endpoint}?${active.param}=${encodeURIComponent(value)}`;
+    const params = new URLSearchParams();
+    params.set(active.param, value);
+    for (const [k, v] of buildExtras()) params.set(k, v);
+    return `${API_ROOT}${active.path}?${params.toString()}`;
   }
   function proxyUrl(value) {
-    return `${PROXY_URL}?service=${active.id}&value=${encodeURIComponent(value)}`;
+    const params = new URLSearchParams();
+    params.set("service", active.id);
+    params.set("value", value);
+    for (const [k, v] of buildExtras()) params.set(k, v);
+    return `${PROXY_URL}?${params.toString()}`;
   }
 
   async function callProxy(value) {
@@ -145,17 +290,24 @@
     if (!res.ok || wrapped.ok === false) {
       throw new Error(wrapped.message || wrapped.error || `proxy ${res.status}`);
     }
-    return wrapped.data;
+    return { data: wrapped.data, kind: wrapped.kind };
   }
   async function callDirect(value) {
-    const res = await fetch(directUrl(value), { headers: { Accept: "application/json, text/plain, */*" } });
-    const raw = await res.text();
+    const res = await fetch(directUrl(value), { headers: { Accept: "application/json, text/plain, image/*, */*" } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    try { return JSON.parse(raw); } catch { return raw; }
+    const ct = res.headers.get("content-type") || "";
+    if (/^image\//i.test(ct)) {
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      return { data: { result: url, image: url }, kind: "image" };
+    }
+    const raw = await res.text();
+    try { return { data: JSON.parse(raw), kind: undefined }; }
+    catch { return { data: raw, kind: undefined }; }
   }
 
   /* ===================================================================
-     DOWNLOAD FLOW
+     ACTION FLOW
      =================================================================== */
   async function startDownload() {
     const val = el.input.value.trim();
@@ -168,26 +320,28 @@
     showSkeleton();
     haptic(10);
 
-    let data = null, err = null;
+    let result = null, err = null;
     try {
-      data = await callProxy(val);              // try Netlify proxy first
+      result = await callProxy(val);              // try Netlify proxy first
     } catch (e1) {
-      try { data = await callDirect(val); }     // fall back to direct browser call
+      try { result = await callDirect(val); }     // fall back to direct browser call
       catch (e2) { err = e2.message?.includes("HTTP") || /CORS|fetch|network/i.test(e2.message) ? e2 : e1; }
     }
 
-    // 1) transport failed entirely
-    if (data == null) {
+    if (result == null || result.data == null) {
       renderError(err || new Error("Tidak ada respons dari server."));
       haptic([50, 30, 50]);
     } else {
-      // 2) the API itself reported a failure (even if HTTP 200)
+      const { data, kind } = result;
       const apiMsg = apiErrorMessage(data);
-      if (apiMsg && !hasMedia(data)) {
+      const success = kind === "image" || hasMedia(data) || (active.category === "image" && findResultImage(data));
+      if (apiMsg && !success) {
         renderError(new Error(apiMsg), data, true);
         haptic([50, 30, 50]);
+      } else if (active.category === "image") {
+        const ok = renderImageResult(data, kind, val);
+        if (ok) { pushRecent(val, active.name); haptic([15, 40, 15]); }
       } else {
-        // 3) success → render media
         const ok = renderResult(data, val);
         if (ok) { pushRecent(val, lastTitle); haptic([15, 40, 15]); }
       }
@@ -198,25 +352,16 @@
     el.resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  /* Detect an error envelope returned by the upstream API.
-     Handles shapes like:
-       { status:false, message:"..." }
-       { success:false, error:"..." }
-       { result:{ success:false, message:"Internal Server Error",
-                  error:"Request failed with status code 404" } }
-     Returns a human message string, or "" if it looks fine. */
   function apiErrorMessage(data) {
     if (typeof data !== "object" || data === null) return "";
     const nodes = [data, data.result, data.data].filter((n) => n && typeof n === "object");
-    let failed = false;
-    let detail = "";
+    let failed = false, detail = "";
     for (const n of nodes) {
       if (n.success === false || n.status === false || n.ok === false || n.error) failed = true;
       const msg = n.error || n.message || n.msg;
       if (msg && typeof msg === "string" && !detail) detail = msg;
     }
     if (!failed) return "";
-    // map common upstream errors to friendlier wording
     if (/404|not found/i.test(detail)) return "Konten tidak ditemukan (404) — link mungkin salah, sudah dihapus, atau privat.";
     if (/internal server error|500/i.test(detail)) return "Server sumber sedang bermasalah (Internal Server Error). Coba lagi sebentar lagi.";
     if (/timeout|timed out|504/i.test(detail)) return "Server sumber lama merespons (timeout). Coba lagi.";
@@ -240,7 +385,7 @@
     url: /^https?:\/\//i,
   };
   const HINT = {
-    video: /(video|nowatermark|nowm|hdplay|play|hd|sd|reel|mp4)/i,
+    video: /(video|nowatermark|nowm|hdplay|play|hd|sd|reel|mp4|720|1080)/i,
     audio: /(audio|music|sound|song|mp3|track|preview)/i,
     image: /(thumb|image|cover|photo|pic|display|poster|avatar|art)/i,
     title: /(title|caption|desc|name|track|fulltitle|text)/i,
@@ -276,8 +421,32 @@
     return out.media.length > 0;
   }
 
+  /* find a processed-image URL (http or data:) in an image-tool response */
+  function findResultImage(data) {
+    if (typeof data === "string") {
+      if (/^data:image\//i.test(data) || (RX.url.test(data))) return data;
+      return "";
+    }
+    if (typeof data !== "object" || data === null) return "";
+    const PREF = /(result|output|image|hasil|hd|url|link|data)/i;
+    let best = "", fallback = "";
+    (function walk(obj, key) {
+      if (best) return;
+      if (typeof obj === "string") {
+        const isImg = /^data:image\//i.test(obj) || RX.image.test(obj) || (RX.url.test(obj) && PREF.test(key || ""));
+        if (isImg) {
+          if (PREF.test(key || "")) best = obj;
+          else if (!fallback && RX.url.test(obj)) fallback = obj;
+        }
+        return;
+      }
+      if (typeof obj === "object" && obj) Object.keys(obj).forEach((k) => walk(obj[k], k));
+    })(data, "");
+    return best || fallback;
+  }
+
   /* ===================================================================
-     RENDER RESULT
+     RENDER — downloaders
      =================================================================== */
   let lastTitle = "";
 
@@ -303,7 +472,6 @@
     const thumb = images[0];
     lastTitle = out.title || `${active.name} media`;
 
-    // media column
     let mediaCol = "";
     if (videos.length) {
       mediaCol = `<video src="${attr(videos[0].url)}" controls playsinline preload="metadata" ${thumb ? `poster="${attr(thumb.url)}"` : ""}></video>`;
@@ -313,7 +481,6 @@
       mediaCol = `<img class="thumb" src="${attr(thumb.url)}" alt="thumbnail" loading="lazy" onerror="this.style.display='none'">`;
     }
 
-    // actions
     const actions = [];
     videos.forEach((m, i) => actions.push(action(m.url, `⬇ Video${videos.length > 1 ? " " + (i + 1) : ""}`, i === 0 ? "primary" : "")));
     audios.forEach((m, i) => actions.push(action(m.url, `🎵 Audio${audios.length > 1 ? " " + (i + 1) : ""}`, "audio")));
@@ -325,7 +492,7 @@
       ? `<div class="gallery">${images.map((m) => `<a href="${attr(m.url)}" target="_blank" rel="noopener" download><img src="${attr(m.url)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></a>`).join("")}</div>`
       : "";
 
-    const wideClass = (active.id === "twitter") ? " wide" : "";
+    const wideClass = (active.id === "twitter" || active.family === "youtube") ? " wide" : "";
 
     el.resultWrap.innerHTML = `
       <div class="card">
@@ -341,19 +508,60 @@
           ${audios.length ? `<audio class="card-audio" src="${attr(audios[0].url)}" controls preload="none"></audio>` : ""}
           <div class="dl-actions">${actions.join("")}</div>
           ${gallery}
-          <details class="raw-toggle">
-            <summary>Lihat detail teknis (JSON)</summary>
-            <pre class="raw-pre">${escapeHtml(JSON.stringify(data, null, 2))}</pre>
-          </details>
+          ${rawDetails(data)}
         </div>
       </div>`;
     el.resultSection.hidden = false;
-
-    const dlAll = el.resultWrap.querySelector("[data-all]");
-    if (dlAll) dlAll.addEventListener("click", () => downloadAll(JSON.parse(dlAll.dataset.all)));
-
+    wireDownloadAll();
     toast("Berhasil! Tinggal pilih unduhanmu ⬇", "ok");
     return true;
+  }
+
+  /* ===================================================================
+     RENDER — image tools (before / after)
+     =================================================================== */
+  function renderImageResult(data, kind, srcUrl) {
+    const resultUrl = (kind === "image" && typeof data === "object" && data && (data.result || data.image)) || findResultImage(data);
+    if (!resultUrl) {
+      renderError(new Error("Gambar hasil tidak ditemukan pada respons."), data);
+      return false;
+    }
+    const dl = action(resultUrl, "⬇ Unduh hasil", "primary");
+    el.resultWrap.innerHTML = `
+      <div class="card image-result">
+        <div class="card-info" style="width:100%">
+          <span class="card-platform" style="background:${active.badge}">${ICONS[active.id]} ${active.name}</span>
+          <div class="card-title">${escapeHtml(active.name)} — selesai ✨</div>
+          <div class="compare">
+            <figure>
+              <figcaption>Sebelum</figcaption>
+              <img src="${attr(srcUrl)}" alt="sebelum" loading="lazy" onerror="this.style.opacity=.3">
+            </figure>
+            <figure>
+              <figcaption>Sesudah</figcaption>
+              <img src="${attr(resultUrl)}" alt="sesudah" loading="lazy">
+            </figure>
+          </div>
+          <div class="dl-actions">
+            ${dl}
+            <a class="dl-action" href="${attr(resultUrl)}" target="_blank" rel="noopener">↗ Buka di tab baru</a>
+          </div>
+          ${rawDetails(data)}
+        </div>
+      </div>`;
+    el.resultSection.hidden = false;
+    toast("Selesai! Lihat hasilnya di bawah ✨", "ok");
+    return true;
+  }
+
+  function rawDetails(data) {
+    const txt = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+    const trimmed = txt.length > 6000 ? txt.slice(0, 6000) + "\n… (dipotong)" : txt;
+    return `<details class="raw-toggle"><summary>Lihat detail teknis (JSON)</summary><pre class="raw-pre">${escapeHtml(trimmed)}</pre></details>`;
+  }
+  function wireDownloadAll() {
+    const dlAll = el.resultWrap.querySelector("[data-all]");
+    if (dlAll) dlAll.addEventListener("click", () => downloadAll(JSON.parse(dlAll.dataset.all)));
   }
 
   function action(url, label, variant) {
@@ -391,25 +599,23 @@
 
     let tips = "";
     if (isApiError) {
-      // upstream API responded but with an error — not our fault, not the user's link format
       tips = `
         <ul class="err-tips">
           <li>Coba <b>lagi</b> beberapa saat — server sumber kadang sibuk.</li>
           ${active.id === "tiktok" ? "<li>Coba ganti ke tab <b>TikTok V2</b>.</li>" : ""}
           ${active.id === "tiktokv2" ? "<li>Coba ganti ke tab <b>TikTok</b> (yang utama).</li>" : ""}
-          <li>Pastikan kontennya <b>publik</b> (bukan akun privat) dan link masih aktif.</li>
-          <li>Gunakan link <b>asli/lengkap</b>, bukan contoh placeholder.</li>
+          ${active.category === "image" ? "<li>Pakai <b>URL gambar langsung</b> (diakhiri .jpg/.png) yang bisa diakses publik.</li>" : "<li>Pastikan kontennya <b>publik</b> dan link masih aktif.</li>"}
         </ul>`;
     } else if (corsLike) {
       tips = `<p class="err-sub">Sepertinya situs ini belum berjalan di Netlify, jadi permintaan langsung dari browser diblokir (CORS). Deploy ke Netlify agar proxy aktif.</p>`;
     } else {
-      tips = `<p class="err-sub">Pastikan link benar &amp; kontennya publik, lalu coba lagi.${active.id === "tiktok" ? " Untuk TikTok, coba juga tab <b>TikTok V2</b>." : ""}</p>`;
+      tips = `<p class="err-sub">Pastikan link benar &amp; bisa diakses publik, lalu coba lagi.${active.id === "tiktok" ? " Untuk TikTok, coba juga tab <b>TikTok V2</b>." : ""}</p>`;
     }
 
     el.resultWrap.innerHTML = `
       <div class="error-box">
         <div class="err-ic">${isApiError ? "🛠️" : "😕"}</div>
-        <h3>${isApiError ? "Server sumber sedang bermasalah" : "Gagal mengambil media"}</h3>
+        <h3>${isApiError ? "Server sumber sedang bermasalah" : "Gagal memproses"}</h3>
         <p class="err-msg">${escapeHtml(msg)}</p>
         ${tips}
         <button class="dl-action primary retry" id="retry-btn">↻ Coba lagi</button>
@@ -417,7 +623,7 @@
       </div>`;
     const rb = $("#retry-btn");
     if (rb) rb.addEventListener("click", startDownload);
-    toast(isApiError ? "Server sumber error — coba lagi" : "Gagal — coba lagi atau ganti platform", "err");
+    toast(isApiError ? "Server sumber error — coba lagi" : "Gagal — coba lagi atau ganti tool", "err");
   }
 
   /* ===================================================================
@@ -426,7 +632,7 @@
   function loadRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; } }
   function saveRecent(items) { localStorage.setItem(RECENT_KEY, JSON.stringify(items)); }
   function pushRecent(value, title) {
-    let items = loadRecent().filter((it) => it.value !== value);
+    let items = loadRecent().filter((it) => !(it.value === value && it.service === active.id));
     items.unshift({ service: active.id, value, title: title || "", ts: Date.now() });
     saveRecent(items.slice(0, MAX_RECENT));
     renderRecent();
@@ -462,14 +668,10 @@
   function registerSW() {
     if (!("serviceWorker" in navigator)) return;
     if (location.protocol !== "https:" && location.hostname !== "localhost") return;
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
-    });
+    window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
   }
   function initInstall() {
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault(); deferredPrompt = e; el.btnInstall.hidden = false;
-    });
+    window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredPrompt = e; el.btnInstall.hidden = false; });
     el.btnInstall.addEventListener("click", async () => {
       if (!deferredPrompt) { toast("Gunakan menu browser → Add to Home Screen"); return; }
       deferredPrompt.prompt();
