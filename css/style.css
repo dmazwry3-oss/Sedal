@@ -336,3 +336,77 @@ img, video { max-width: 100%; display: block; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+
+/* =====================================================================
+   INPUT MODE TOGGLE (URL vs Upload)  —  image tools
+   ===================================================================== */
+.mode-toggle {
+  display: inline-flex; gap: 4px; margin: 0 auto 14px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 13px;
+}
+.mode-btn {
+  font-family: var(--font); font-weight: 600; font-size: 13.5px; cursor: pointer;
+  padding: 9px 18px; border-radius: 10px; border: none; background: transparent;
+  color: var(--txt-mut); transition: all .18s;
+}
+.mode-btn:hover { color: var(--txt); }
+.mode-btn.active { color: #fff; background: var(--grad); box-shadow: 0 6px 16px -8px rgba(124,92,255,.7); }
+
+/* =====================================================================
+   UPLOAD ZONE
+   ===================================================================== */
+.upload-zone { display: flex; flex-direction: column; gap: 12px; }
+.drop-area {
+  position: relative; cursor: pointer; border-radius: var(--radius);
+  border: 2px dashed var(--border-2); background: var(--surface);
+  padding: 26px 20px; text-align: center; transition: border-color .2s, background .2s, transform .15s;
+  outline: none;
+}
+.drop-area:hover, .drop-area:focus-visible { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.drop-area.drag { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); transform: scale(1.01); }
+.drop-area.has-file { cursor: default; border-style: solid; }
+.drop-empty { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.drop-ic { font-size: 42px; }
+.drop-title { font-weight: 700; color: var(--txt); margin: 4px 0 0; font-size: 16px; }
+.drop-sub { color: var(--txt-mut); font-size: 13px; margin: 0; }
+
+.drop-preview { display: flex; align-items: center; gap: 14px; text-align: left; }
+.drop-preview img { width: 76px; height: 76px; flex: none; border-radius: 12px; object-fit: cover; border: 1px solid var(--border-2); background:
+  repeating-conic-gradient(#1a2030 0% 25%, #141a28 0% 50%) 50% / 16px 16px; }
+.drop-preview-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.preview-name { font-weight: 600; color: var(--txt); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview-size { font-size: 12.5px; color: var(--txt-faint); }
+.preview-state { font-size: 12.5px; font-weight: 600; min-height: 1em; }
+.preview-state.uploading { color: var(--accent-2); }
+.preview-state.uploading::after { content: ""; display: inline-block; width: 11px; height: 11px; margin-left: 6px; vertical-align: -1px; border: 2px solid color-mix(in srgb, var(--accent-2) 40%, transparent); border-top-color: var(--accent-2); border-radius: 50%; animation: spin .7s linear infinite; }
+.preview-state.ok { color: var(--ok); }
+.preview-state.err { color: var(--err); }
+.preview-remove { align-self: center; }
+.preview-remove:hover { color: var(--err); border-color: var(--err); }
+
+/* =====================================================================
+   SCROLL REVEAL + NAV ACTIVE
+   ===================================================================== */
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1); }
+.reveal.in { opacity: 1; transform: none; }
+.steps .reveal:nth-child(2), .features .reveal:nth-child(2) { transition-delay: .07s; }
+.steps .reveal:nth-child(3), .features .reveal:nth-child(3) { transition-delay: .14s; }
+.features .reveal:nth-child(4) { transition-delay: .07s; }
+.features .reveal:nth-child(5) { transition-delay: .14s; }
+.features .reveal:nth-child(6) { transition-delay: .21s; }
+.faq .reveal:nth-child(2) { transition-delay: .05s; }
+.faq .reveal:nth-child(3) { transition-delay: .10s; }
+.faq .reveal:nth-child(4) { transition-delay: .15s; }
+
+.nav-links a.active { color: var(--txt); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+/* upload zone responsive */
+@media (max-width: 620px) {
+  .mode-toggle { width: 100%; }
+  .mode-btn { flex: 1; }
+  .drop-preview img { width: 62px; height: 62px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; }
+}

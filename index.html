@@ -73,7 +73,13 @@
         <!-- extra options (scale / mode / level) -->
         <div class="tool-options" id="tool-options" hidden></div>
 
-        <!-- downloader box -->
+        <!-- input-mode toggle (only for image tools) -->
+        <div class="mode-toggle" id="mode-toggle" hidden role="tablist" aria-label="Metode input gambar">
+          <button class="mode-btn active" id="mode-url" data-mode="url" role="tab">🔗 Pakai Link</button>
+          <button class="mode-btn" id="mode-upload" data-mode="upload" role="tab">⬆️ Upload Gambar</button>
+        </div>
+
+        <!-- downloader box (URL mode) -->
         <div class="dl-box" id="dl-box">
           <div class="dl-input-row">
             <span class="dl-input-icon" id="dl-input-icon">🔗</span>
@@ -91,6 +97,30 @@
           </div>
           <button class="btn-download" id="btn-download">
             <span class="btn-download-label">⬇ Download</span>
+          </button>
+        </div>
+
+        <!-- upload zone (Upload mode, image tools only) -->
+        <div class="upload-zone" id="upload-zone" hidden>
+          <input type="file" id="file-input" accept="image/*" hidden />
+          <div class="drop-area" id="drop-area" tabindex="0" role="button" aria-label="Pilih atau seret gambar">
+            <div class="drop-empty" id="drop-empty">
+              <div class="drop-ic">🖼️</div>
+              <p class="drop-title">Ketuk untuk pilih gambar</p>
+              <p class="drop-sub">atau seret &amp; lepas ke sini · maks 10&nbsp;MB</p>
+            </div>
+            <div class="drop-preview" id="drop-preview" hidden>
+              <img id="preview-img" alt="pratinjau" />
+              <div class="drop-preview-info">
+                <span class="preview-name" id="preview-name">image.jpg</span>
+                <span class="preview-size" id="preview-size"></span>
+                <span class="preview-state" id="preview-state"></span>
+              </div>
+              <button class="icon-btn preview-remove" id="preview-remove" title="Ganti gambar" aria-label="Ganti gambar">✕</button>
+            </div>
+          </div>
+          <button class="btn-download" id="btn-process">
+            <span class="btn-download-label">✨ Proses Gambar</span>
           </button>
         </div>
 
@@ -117,67 +147,71 @@
 
     <!-- ===================== HOW TO ===================== -->
     <section class="section" id="cara">
-      <h2 class="section-title">Cara pakai — 3 langkah mudah</h2>
+      <h2 class="section-title reveal">Cara pakai — 3 langkah mudah</h2>
       <div class="steps">
-        <div class="step">
+        <div class="step reveal">
           <div class="step-num">1</div>
           <div class="step-ic">📋</div>
-          <h3>Salin link</h3>
-          <p>Buka TikTok / Instagram / Spotify / X, lalu salin tautan video atau lagu yang ingin diunduh.</p>
+          <h3>Pilih tool</h3>
+          <p>Pilih platform unduhan atau alat gambar. Untuk alat gambar kamu bisa pakai <b>link</b> atau <b>upload</b> langsung.</p>
         </div>
-        <div class="step">
+        <div class="step reveal">
           <div class="step-num">2</div>
           <div class="step-ic">📥</div>
-          <h3>Tempel di Sedal</h3>
-          <p>Tempel link ke kotak di atas. Platform terdeteksi otomatis, tinggal tekan <b>Download</b>.</p>
+          <h3>Tempel / unggah</h3>
+          <p>Tempel link, atau seret &amp; lepas gambar. Platform terdeteksi otomatis — tinggal tekan tombolnya.</p>
         </div>
-        <div class="step">
+        <div class="step reveal">
           <div class="step-num">3</div>
           <div class="step-ic">⬇️</div>
           <h3>Simpan</h3>
-          <p>Pilih kualitas yang diinginkan dan simpan video / audio / gambar ke perangkatmu.</p>
+          <p>Lihat pratinjau hasilnya, lalu simpan video / audio / gambar ke perangkatmu.</p>
         </div>
       </div>
     </section>
 
     <!-- ===================== FEATURES ===================== -->
     <section class="section" id="fitur">
-      <h2 class="section-title">Kenapa pakai Sedal?</h2>
+      <h2 class="section-title reveal">Kenapa pakai Sedal?</h2>
       <div class="features">
-        <div class="feature"><div class="feature-ic">🎬</div><h3>Banyak platform</h3><p>TikTok, Instagram, Spotify, Twitter/X, dan YouTube (MP3/MP4).</p></div>
-        <div class="feature"><div class="feature-ic">🆓</div><h3>Gratis</h3><p>Tidak ada biaya, tidak perlu daftar atau login.</p></div>
-        <div class="feature"><div class="feature-ic">💧</div><h3>Tanpa watermark</h3><p>Video TikTok bersih tanpa logo, siap dibagikan ulang.</p></div>
-        <div class="feature"><div class="feature-ic">🖼️</div><h3>Alat gambar</h3><p>Upscale HD, perjelas foto buram, dan hapus background dalam sekali klik.</p></div>
-        <div class="feature"><div class="feature-ic">🔒</div><h3>Privat</h3><p>Kami tidak menyimpan media kamu. Riwayat hanya tersimpan di perangkatmu.</p></div>
-        <div class="feature"><div class="feature-ic">📱</div><h3>Semua perangkat</h3><p>Jalan mulus di HP, tablet, dan desktop. Bisa diinstal seperti aplikasi.</p></div>
+        <div class="feature reveal"><div class="feature-ic">🎬</div><h3>Banyak platform</h3><p>TikTok, Instagram, Spotify, Twitter/X, dan YouTube (MP3/MP4).</p></div>
+        <div class="feature reveal"><div class="feature-ic">🆓</div><h3>Gratis</h3><p>Tidak ada biaya, tidak perlu daftar atau login.</p></div>
+        <div class="feature reveal"><div class="feature-ic">💧</div><h3>Tanpa watermark</h3><p>Video TikTok bersih tanpa logo, siap dibagikan ulang.</p></div>
+        <div class="feature reveal"><div class="feature-ic">🖼️</div><h3>Alat gambar + upload</h3><p>Upscale HD, perjelas foto, hapus background — pakai link atau unggah file.</p></div>
+        <div class="feature reveal"><div class="feature-ic">🔒</div><h3>Privat</h3><p>Kami tidak menyimpan media kamu. Riwayat hanya tersimpan di perangkatmu.</p></div>
+        <div class="feature reveal"><div class="feature-ic">📱</div><h3>Semua perangkat</h3><p>Jalan mulus di HP, tablet, dan desktop. Bisa diinstal seperti aplikasi.</p></div>
       </div>
     </section>
 
     <!-- ===================== FAQ ===================== -->
     <section class="section" id="faq">
-      <h2 class="section-title">Pertanyaan umum</h2>
+      <h2 class="section-title reveal">Pertanyaan umum</h2>
       <div class="faq" id="faq-list">
-        <details class="faq-item">
+        <details class="faq-item reveal">
           <summary>Apakah Sedal gratis?</summary>
           <p>Ya, sepenuhnya gratis. Kamu tidak perlu membuat akun atau membayar apa pun.</p>
         </details>
-        <details class="faq-item">
+        <details class="faq-item reveal">
           <summary>Apakah video TikTok benar-benar tanpa watermark?</summary>
           <p>Ya, untuk TikTok kami mengambil versi tanpa watermark bila tersedia. Jika tidak, gunakan opsi <b>TikTok V2</b> sebagai cadangan.</p>
         </details>
-        <details class="faq-item">
+        <details class="faq-item reveal">
           <summary>Platform apa saja yang didukung?</summary>
           <p>Unduh media: TikTok, Instagram (foto/Reels/carousel), Spotify (lagu), Twitter/X (video &amp; gambar), dan YouTube (MP3 &amp; MP4). Alat gambar: upscale HD, Remini (perjelas), hapus background, Wink, dan ToPixel.</p>
         </details>
-        <details class="faq-item">
+        <details class="faq-item reveal">
           <summary>Bagaimana cara pakai alat gambar?</summary>
-          <p>Pilih tab di grup <b>Alat Gambar</b>, lalu tempel <b>URL gambar langsung</b> (yang diakhiri .jpg/.png dan bisa diakses publik). Untuk beberapa tool ada opsi tambahan seperti <b>Skala</b> (HD Upscale), <b>Mode</b> (Wink), atau <b>Level</b> (ToPixel). Hasilnya tampil berdampingan: sebelum &amp; sesudah.</p>
+          <p>Pilih tab di grup <b>Alat Gambar</b>. Kamu bisa memilih metode <b>🔗 Pakai Link</b> (tempel URL gambar langsung) atau <b>⬆️ Upload Gambar</b> (pilih/seret file dari perangkat — otomatis diunggah). Beberapa tool punya opsi tambahan seperti <b>Skala</b>, <b>Mode</b>, atau <b>Level</b>. Hasilnya tampil berdampingan: sebelum &amp; sesudah.</p>
         </details>
-        <details class="faq-item">
+        <details class="faq-item reveal">
+          <summary>Apakah gambar yang saya upload aman?</summary>
+          <p>File yang diunggah hanya dititipkan ke layanan hosting gambar publik agar bisa diproses oleh alat gambar, lalu tautannya dipakai sekali. Hindari mengunggah foto pribadi/sensitif.</p>
+        </details>
+        <details class="faq-item reveal">
           <summary>Kenapa kadang gagal atau kosong?</summary>
-          <p>Pastikan tautannya benar dan kontennya publik (bukan privat). Untuk TikTok, coba tombol <b>TikTok V2</b>. Untuk alat gambar, gunakan URL gambar langsung yang bisa diakses. Server sumber juga kadang sibuk — coba lagi beberapa saat.</p>
+          <p>Pastikan tautannya benar dan kontennya publik (bukan privat). Untuk TikTok, coba tombol <b>TikTok V2</b>. Untuk alat gambar, gunakan URL gambar langsung atau metode upload. Server sumber juga kadang sibuk — coba lagi beberapa saat.</p>
         </details>
-        <details class="faq-item">
+        <details class="faq-item reveal">
           <summary>Apakah aman dan legal?</summary>
           <p>Sedal hanya membantu mengambil tautan media. Unduh hanya konten yang kamu miliki haknya atau yang diizinkan. Hormati hak cipta pembuat konten.</p>
         </details>

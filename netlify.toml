@@ -17,6 +17,12 @@
   to = "/.netlify/functions/proxy"
   status = 200
 
+# Friendly alias: /api/upload -> the image uploader function
+[[redirects]]
+  from = "/api/upload"
+  to = "/.netlify/functions/upload"
+  status = 200
+
 # SPA-ish fallback so deep links still load index.html
 [[redirects]]
   from = "/*"

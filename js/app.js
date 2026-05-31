@@ -8,6 +8,7 @@
 
   const API_ROOT = "https://api-xemoz-official.my.id/api/";
   const PROXY_URL = "/.netlify/functions/proxy";
+  const UPLOAD_URL = "/.netlify/functions/upload";
   const RECENT_KEY = "sedal_recent_v1";
   const MAX_RECENT = 6;
 
@@ -158,12 +159,22 @@
     recent: $("#recent"), recentList: $("#recent-list"), recentClear: $("#recent-clear"),
     toast: $("#toast"),
     btnInstall: $("#btn-install"),
+    // upload UI
+    modeToggle: $("#mode-toggle"), modeUrl: $("#mode-url"), modeUpload: $("#mode-upload"),
+    uploadZone: $("#upload-zone"), fileInput: $("#file-input"), dropArea: $("#drop-area"),
+    dropEmpty: $("#drop-empty"), dropPreview: $("#drop-preview"),
+    previewImg: $("#preview-img"), previewName: $("#preview-name"),
+    previewSize: $("#preview-size"), previewState: $("#preview-state"),
+    previewRemove: $("#preview-remove"), btnProcess: $("#btn-process"),
   };
 
   let active = TOOLS[0];
   let busy = false;
   let deferredPrompt = null;
   let extraValues = {};   // current values of the active tool's extra params
+  let inputMode = "url";  // "url" | "upload" (upload only for image tools)
+  let uploaded = null;    // { hostedUrl, previewUrl, name } once an image is hosted
+  let pendingFile = null; // selected file awaiting upload
 
   /* ===================================================================
      TABS (grouped by category)
@@ -204,7 +215,29 @@
     (active.extras || []).forEach((ex) => (extraValues[ex.key] = ex.default));
     buildOptions();
 
+    // image tools get the URL/Upload mode toggle; downloaders are URL-only
+    const isImage = active.category === "image";
+    el.modeToggle.hidden = !isImage;
+    if (!isImage && inputMode === "upload") setMode("url");
+    else applyMode(); // refresh which box is visible
+
     if (!keepInputValue) setHint(active.tip);
+  }
+
+  /* ===================================================================
+     INPUT MODE (URL vs Upload) — image tools only
+     =================================================================== */
+  function setMode(mode) {
+    inputMode = mode;
+    applyMode();
+  }
+  function applyMode() {
+    const isImage = active.category === "image";
+    const uploadVisible = isImage && inputMode === "upload";
+    el.modeUrl.classList.toggle("active", inputMode === "url");
+    el.modeUpload.classList.toggle("active", inputMode === "upload");
+    el.box.hidden = uploadVisible;          // URL box
+    el.uploadZone.hidden = !uploadVisible;  // upload zone
   }
 
   /* extra-parameter controls (scale / mode / level) */
@@ -307,18 +340,145 @@
   }
 
   /* ===================================================================
+     IMAGE UPLOAD (pick / drop / paste -> compress -> host)
+     =================================================================== */
+  const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+  function humanSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + " KB";
+    return (bytes / 1024 / 1024).toFixed(1) + " MB";
+  }
+
+  async function handleFile(file) {
+    if (!file) return;
+    if (!/^image\//i.test(file.type)) { toast("File harus berupa gambar", "err"); return; }
+    if (file.size > MAX_UPLOAD_BYTES) { toast("Ukuran gambar maksimal 10 MB", "err"); return; }
+
+    // reset previous hosted state
+    uploaded = null;
+    pendingFile = file;
+
+    // preview immediately
+    const previewUrl = URL.createObjectURL(file);
+    el.previewImg.src = previewUrl;
+    el.previewName.textContent = file.name || "image";
+    el.previewSize.textContent = humanSize(file.size);
+    el.previewState.textContent = "";
+    el.previewState.className = "preview-state";
+    el.dropEmpty.hidden = true;
+    el.dropPreview.hidden = false;
+    el.dropArea.classList.add("has-file");
+  }
+
+  // Downscale/compress large images in-browser to speed up the upload.
+  async function compressImage(file) {
+    // keep small images & non-JPEG/PNG (e.g. gif) as-is
+    if (file.size < 600 * 1024 || !/image\/(jpe?g|png|webp)/i.test(file.type)) return file;
+    try {
+      const bitmap = await createImageBitmap(file);
+      const MAXD = 2000;
+      let { width, height } = bitmap;
+      const scale = Math.min(1, MAXD / Math.max(width, height));
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      canvas.getContext("2d").drawImage(bitmap, 0, 0, width, height);
+      const blob = await new Promise((r) => canvas.toBlob(r, "image/jpeg", 0.85));
+      if (blob && blob.size < file.size) return new File([blob], (file.name || "image").replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+    } catch { /* fall through to original */ }
+    return file;
+  }
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result).replace(/^data:[^;]+;base64,/, ""));
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+  }
+
+  // Ensure pendingFile is hosted; returns a public URL or throws.
+  async function ensureHosted() {
+    if (uploaded && uploaded.hostedUrl) return uploaded.hostedUrl;
+    if (!pendingFile) throw new Error("Belum ada gambar yang dipilih.");
+
+    el.previewState.textContent = "mengunggah…";
+    el.previewState.className = "preview-state uploading";
+
+    const file = await compressImage(pendingFile);
+    const data = await fileToBase64(file);
+    const res = await fetch(UPLOAD_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: file.name, type: file.type, data }),
+    });
+    let payload;
+    try { payload = await res.json(); } catch { payload = null; }
+    if (!res.ok || !payload || payload.ok === false || !payload.url) {
+      const msg = (payload && payload.message) || `upload gagal (${res.status})`;
+      throw new Error(msg);
+    }
+    uploaded = { hostedUrl: payload.url, previewUrl: el.previewImg.src, name: pendingFile.name };
+    el.previewState.textContent = "✓ terunggah";
+    el.previewState.className = "preview-state ok";
+    return payload.url;
+  }
+
+  function clearUpload() {
+    pendingFile = null;
+    uploaded = null;
+    el.fileInput.value = "";
+    el.dropPreview.hidden = true;
+    el.dropEmpty.hidden = false;
+    el.dropArea.classList.remove("has-file");
+  }
+
+  /* ===================================================================
      ACTION FLOW
      =================================================================== */
+  // Resolve the value to send to the API based on the current input mode.
+  async function getTargetValue() {
+    if (active.category === "image" && inputMode === "upload") {
+      return await ensureHosted();   // upload (if needed) then return hosted URL
+    }
+    return el.input.value.trim();
+  }
   async function startDownload() {
-    const val = el.input.value.trim();
-    if (!val) { toast("Tempel link dulu ya 🙂", "err"); el.input.focus(); return; }
-    if (!/^https?:\/\//i.test(val)) { toast("Link harus diawali http:// atau https://", "err"); return; }
     if (busy) return;
-    busy = true;
 
+    const isUpload = active.category === "image" && inputMode === "upload";
+    if (isUpload && !pendingFile && !(uploaded && uploaded.hostedUrl)) {
+      toast("Pilih atau seret gambar dulu 🙂", "err");
+      el.dropArea.focus();
+      return;
+    }
+    if (!isUpload) {
+      const v = el.input.value.trim();
+      if (!v) { toast("Tempel link dulu ya 🙂", "err"); el.input.focus(); return; }
+      if (!/^https?:\/\//i.test(v)) { toast("Link harus diawali http:// atau https://", "err"); return; }
+    }
+
+    busy = true;
     setLoading(true);
     showSkeleton();
     haptic(10);
+
+    // resolve the target value (may upload the file first)
+    let val;
+    try {
+      val = await getTargetValue();
+    } catch (upErr) {
+      renderError(new Error((upErr && upErr.message) || "Gagal mengunggah gambar."), null, true);
+      if (el.previewState) { el.previewState.textContent = "✕ gagal unggah"; el.previewState.className = "preview-state err"; }
+      haptic([50, 30, 50]);
+      setLoading(false);
+      busy = false;
+      el.resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
 
     let result = null, err = null;
     try {
@@ -372,6 +532,7 @@
   function setLoading(on) {
     el.download.disabled = on;
     el.download.classList.toggle("loading", on);
+    if (el.btnProcess) { el.btnProcess.disabled = on; el.btnProcess.classList.toggle("loading", on); }
     el.progress.classList.toggle("active", on);
   }
 
@@ -663,6 +824,41 @@
   }
 
   /* ===================================================================
+     UI/UX — scroll reveal + nav scrollspy
+     =================================================================== */
+  function initReveal() {
+    const els = document.querySelectorAll(".reveal");
+    if (!els.length) return;
+    if (!("IntersectionObserver" in window) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      els.forEach((e) => e.classList.add("in"));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+    els.forEach((e) => io.observe(e));
+  }
+
+  function initScrollSpy() {
+    const links = [...document.querySelectorAll(".nav-links a[href^='#']")];
+    const sections = links
+      .map((a) => document.querySelector(a.getAttribute("href")))
+      .filter(Boolean);
+    if (!sections.length || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (en.isIntersecting) {
+          const id = "#" + en.target.id;
+          links.forEach((a) => a.classList.toggle("active", a.getAttribute("href") === id));
+        }
+      });
+    }, { threshold: 0.4 });
+    sections.forEach((s) => io.observe(s));
+  }
+
+  /* ===================================================================
      PWA / INSTALL / SHARE
      =================================================================== */
   function registerSW() {
@@ -732,6 +928,36 @@
     el.sample.addEventListener("click", () => { el.input.value = active.sample; autoDetect(); el.input.focus(); });
     el.recentClear.addEventListener("click", () => { saveRecent([]); renderRecent(); toast("Riwayat dibersihkan"); });
 
+    // ---- input-mode toggle ----
+    el.modeUrl.addEventListener("click", () => setMode("url"));
+    el.modeUpload.addEventListener("click", () => setMode("upload"));
+
+    // ---- upload: browse / drag-drop / paste ----
+    el.btnProcess.addEventListener("click", startDownload);
+    el.dropArea.addEventListener("click", (e) => { if (!e.target.closest(".preview-remove")) el.fileInput.click(); });
+    el.dropArea.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.fileInput.click(); } });
+    el.fileInput.addEventListener("change", () => { if (el.fileInput.files[0]) handleFile(el.fileInput.files[0]); });
+    el.previewRemove.addEventListener("click", (e) => { e.stopPropagation(); clearUpload(); });
+
+    ["dragenter", "dragover"].forEach((ev) =>
+      el.dropArea.addEventListener(ev, (e) => { e.preventDefault(); el.dropArea.classList.add("drag"); })
+    );
+    ["dragleave", "drop"].forEach((ev) =>
+      el.dropArea.addEventListener(ev, (e) => { e.preventDefault(); el.dropArea.classList.remove("drag"); })
+    );
+    el.dropArea.addEventListener("drop", (e) => {
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+    // paste an image while in upload mode
+    window.addEventListener("paste", (e) => {
+      if (!(active.category === "image" && inputMode === "upload")) return;
+      const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
+      if (item) { const f = item.getAsFile(); if (f) { handleFile(f); toast("Gambar dari clipboard ditempel", "ok"); } }
+    });
+
+    initReveal();
+    initScrollSpy();
     registerSW();
     initInstall();
     handleLaunch();

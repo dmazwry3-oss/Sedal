@@ -6,7 +6,7 @@
    - NEVER caches API / proxy responses (always live)
    ===================================================================== */
 
-const VERSION = "sedal-v1";
+const VERSION = "sedal-v2";
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
@@ -23,6 +23,7 @@ const SHELL = [
 const NEVER_CACHE = [
   "/.netlify/functions/",
   "/api/proxy",
+  "/api/upload",
   "api-xemoz-official.my.id",
 ];
 
